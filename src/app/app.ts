@@ -80,7 +80,7 @@ export class App implements OnDestroy {
     const key = event.key.toLowerCase();
 
     if (key === 'escape') {
-      if (this.store.tool() !== 'select') this.store.cancelDrawing();
+      if (this.store.tool() !== 'select' || this.store.extending()) this.store.cancelDrawing();
       else this.store.clearSelection();
     } else if ((key === 'delete' || key === 'backspace') && this.store.selected()) {
       event.preventDefault();
@@ -91,7 +91,7 @@ export class App implements OnDestroy {
     } else if ((event.ctrlKey || event.metaKey) && key === 's') {
       event.preventDefault();
       this.store.downloadFile();
-    } else if (key === 'enter' && this.store.tool() !== 'select') {
+    } else if (key === 'enter' && (this.store.tool() !== 'select' || this.store.extending())) {
       this.store.finishDrawing();
     } else if (!event.ctrlKey && !event.metaKey && !event.altKey) {
       if (key === 'i') this.toolbar().pick('image');

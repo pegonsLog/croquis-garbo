@@ -46,6 +46,34 @@ import { StyleForm } from './style-form';
         }
       }
 
+      @if (p.kind === 'line' || p.kind === 'arrow') {
+        <div class="field mb-3">
+          <span>Prolongar</span>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              class="btn flex-1 justify-center"
+              (click)="store.extendSelected('inicio')"
+              title="Continua desenhando a partir do primeiro ponto"
+            >
+              Pelo início
+            </button>
+            <button
+              type="button"
+              class="btn flex-1 justify-center"
+              (click)="store.extendSelected('fim')"
+              [title]="
+                p.kind === 'arrow'
+                  ? 'Continua desenhando a partir da ponta da seta'
+                  : 'Continua desenhando a partir do último ponto'
+              "
+            >
+              {{ p.kind === 'arrow' ? 'Pela ponta' : 'Pelo fim' }}
+            </button>
+          </div>
+        </div>
+      }
+
       <app-style-form [props]="p" [kind]="p.kind" (changed)="store.updateSelected($event)" />
 
       <div class="mt-4 flex gap-2">
@@ -61,8 +89,9 @@ import { StyleForm } from './style-form';
         </button>
       </div>
       <p class="mt-3 text-xs text-gray-500 leading-snug">
-        Arraste o objeto para mover. Arraste os vértices para mudar a forma. Clique numa linha para
-        criar um vértice novo e use Alt + clique para remover um.
+        Arraste o objeto para mover. Arraste os vértices para mudar a forma (arrastar uma ponta
+        também estica a linha). Clique numa linha para criar um vértice novo e use Alt + clique para
+        remover um.
       </p>
     } @else if (drawKind(); as kind) {
       <h2 class="panel-title mb-3">Novo {{ kindLabel(kind).toLowerCase() }}</h2>

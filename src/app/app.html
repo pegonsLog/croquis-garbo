@@ -3,7 +3,7 @@
   <header class="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-2">
     <div class="flex items-center gap-2 pr-2">
       <svg [appIcon]="icons.Map" class="size-6 text-blue-600"></svg>
-      <span class="font-semibold">Croquis BH</span>
+      <span class="font-semibold">Croquis GARBO</span>
     </div>
 
     <input
@@ -95,9 +95,36 @@
 
     <!-- Mapa -->
     <main class="relative min-w-0 flex-1">
-      <div #map class="absolute inset-0" [class.drawing]="store.tool() !== 'select'"></div>
+      <div
+        #map
+        class="absolute inset-0"
+        [class.drawing]="store.tool() !== 'select' || store.extending()"
+      ></div>
 
-      @if (store.message(); as message) {
+      @if (store.extending(); as from) {
+        <div
+          class="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-3 rounded-md bg-blue-600 px-3 py-2 text-sm text-white shadow"
+        >
+          <span>
+            Prolongando {{ from === 'inicio' ? 'pelo início' : 'pelo fim' }}: clique para
+            acrescentar pontos e dê dois cliques (ou Enter) para terminar.
+          </span>
+          <button
+            type="button"
+            class="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30"
+            (click)="store.finishDrawing()"
+          >
+            Concluir
+          </button>
+          <button
+            type="button"
+            class="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30"
+            (click)="store.cancelDrawing()"
+          >
+            Cancelar
+          </button>
+        </div>
+      } @else if (store.message(); as message) {
         <div
           role="status"
           class="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-md bg-gray-900/90 px-3 py-2 text-sm text-white shadow"

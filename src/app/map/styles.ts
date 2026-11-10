@@ -73,8 +73,8 @@ function props(feature: FeatureLike): CroquiProps {
   return { ...DEFAULT_PROPS, ...(feature.getProperties() as Partial<CroquiProps>) } as CroquiProps;
 }
 
-function arrowHead(geometry: LineString, p: CroquiProps): Style | null {
-  const coords = geometry.getCoordinates();
+function arrowHead(geometry: LineString, p: CroquiProps, inverted = false): Style | null {
+  const coords = inverted ? [...geometry.getCoordinates()].reverse() : geometry.getCoordinates();
   if (coords.length < 2) return null;
   const end = coords[coords.length - 1];
   const prev = coords[coords.length - 2];
@@ -149,7 +149,7 @@ export function croquiStyle(feature: FeatureLike): Style[] {
     case 'arrow': {
       const styles = [new Style({ stroke })];
       if (p.kind === 'arrow' && geometry instanceof LineString) {
-        const head = arrowHead(geometry, p);
+        const head = arrowHead(geometry, p, !!feature.get('_invertida'));
         if (head) styles.push(head);
       }
       return [...styles, ...labelStyle(p, 0, 'line')];

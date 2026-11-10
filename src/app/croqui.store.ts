@@ -77,6 +77,38 @@ const DRAW_TYPES: Record<Exclude<Tool, 'select'>, GeometryType> = {
   circle: 'Circle',
 };
 
+/** Vértices editáveis (linha ou anel externo do polígono). */
+function editableCoords(feature: Feature): number[][] | null {
+  const g = feature.getGeometry();
+  if (g instanceof LineString) return g.getCoordinates();
+  if (g instanceof Polygon) return g.getCoordinates()[0];
+  return null;
+}
+
+/**
+ * O Modify do OpenLayers cria um vértice no momento em que se clica sobre a linha.
+ * Se o clique não arrastou nada, o vértice novo fica exatamente sobre o segmento
+ * original: nesse caso ele é removido.
+ */
+function revertClickInsert(feature: Feature, before: number[][] | undefined, tolerance: number) {
+  const after = editableCoords(feature);
+  if (!before || !after || after.length !== before.length + 1) return;
+  let i = 0;
+  while (i < before.length && before[i][0] === after[i][0] && before[i][1] === after[i][1]) i++;
+  const rest = after.slice(i + 1);
+  const same = rest.every((c, k) => c[0] === before[i + k][0] && c[1] === before[i + k][1]);
+  if (!same || i === 0 || i >= before.length) return;
+  const [a, b, p] = [before[i - 1], before[i], after[i]];
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy) || 1;
+  const distance = Math.abs(dy * p[0] - dx * p[1] + b[0] * a[1] - b[1] * a[0]) / len;
+  if (distance > tolerance) return;
+  const g = feature.getGeometry();
+  if (g instanceof LineString) g.setCoordinates(before);
+  else if (g instanceof Polygon) g.setCoordinates([before, ...g.getCoordinates().slice(1)]);
+}
+
 @Injectable({ providedIn: 'root' })
 export class CroquiStore {
   // ---- estado público ----
@@ -101,6 +133,8 @@ export class CroquiStore {
   readonly drawProps = signal<Omit<CroquiProps, 'kind'>>({ ...DEFAULT_PROPS });
   /** Imagem escolhida para a ferramenta "imagem". */
   readonly pendingImage = signal<{ src: string; width: number } | null>(null);
+  /** Linha/seta sendo prolongada ('fim' ou 'inicio'), ou null. */
+  readonly extending = signal<'fim' | 'inicio' | null>(null);
 
   readonly activeLayer = computed(
     () => this.layers().find((l) => l.id === this.activeLayerId()) ?? null,
@@ -121,8 +155,12 @@ export class CroquiStore {
     layers: (layer) => this.isEditableLayer(layer),
   });
   private modify = new Modify({ features: this.select.getFeatures() });
+  /** Coordenadas antes de cada edição, para desfazer vértices criados por um clique sem arrastar. */
+  private beforeModify = new WeakMap<Feature, number[][]>();
   private translate = new Translate({ features: this.select.getFeatures() });
   private draw?: Draw;
+  private extendDraw?: Draw;
+  private extendSnaps: Snap[] = [];
   private snaps: Snap[] = [];
   private saveTimer?: ReturnType<typeof setTimeout>;
   private loading = false;
@@ -161,7 +199,19 @@ export class CroquiStore {
         if (layer) this.activeLayerId.set(layer.id);
       }
     });
-    this.modify.on('modifyend', () => this.touch());
+    this.modify.on('modifystart', (e) =>
+      e.features.forEach((f) => {
+        const coords = editableCoords(f as Feature);
+        if (coords) this.beforeModify.set(f as Feature, coords);
+      }),
+    );
+    this.modify.on('modifyend', (e) => {
+      const tolerance = (this.map?.getView().getResolution() ?? 1) * 0.5;
+      e.features.forEach((f) =>
+        revertClickInsert(f as Feature, this.beforeModify.get(f as Feature), tolerance),
+      );
+      this.touch();
+    });
     this.translate.on('translateend', () => this.touch());
     this.map.getView().on('change:resolution', () => this.scheduleSave());
     this.map.on('moveend', () => this.scheduleSave());
@@ -293,6 +343,7 @@ export class CroquiStore {
   // ---------- ferramentas ----------
 
   setTool(tool: Tool): void {
+    if (this.extending() && tool !== 'select') this.stopExtending(true);
     if (tool !== 'select' && !this.canDraw()) {
       this.flash('Escolha uma camada visível e desbloqueada para desenhar.');
       return;
@@ -391,12 +442,101 @@ export class CroquiStore {
   }
 
   cancelDrawing(): void {
+    if (this.extending()) {
+      this.stopExtending(false);
+      return;
+    }
     if (this.draw) this.draw.abortDrawing();
     this.setTool('select');
   }
 
   finishDrawing(): void {
-    this.draw?.finishDrawing();
+    if (this.extendDraw) this.extendDraw.finishDrawing();
+    else this.draw?.finishDrawing();
+  }
+
+  // ---------- prolongar linha / seta ----------
+
+  private extendFeature?: Feature;
+  private extendOriginal?: number[][];
+
+  /**
+   * Continua desenhando a linha (ou seta) selecionada a partir de uma das pontas.
+   * Pelo início, a linha é invertida durante o desenho e desinvertida no fim,
+   * para a ponta da seta continuar no mesmo lugar.
+   */
+  extendSelected(from: 'fim' | 'inicio'): void {
+    const feature = this.selected();
+    const geometry = feature?.getGeometry();
+    if (!this.map || !feature || !(geometry instanceof LineString)) return;
+    if (this.extending()) this.stopExtending(false);
+
+    this.extendFeature = feature;
+    this.extendOriginal = geometry.getCoordinates();
+    if (from === 'inicio') {
+      geometry.setCoordinates([...this.extendOriginal].reverse());
+      feature.set('_invertida', true, true);
+    }
+
+    this.clearSelection();
+    if (this.tool() !== 'select') this.setTool('select');
+    this.select.setActive(false);
+    this.translate.setActive(false);
+    this.modify.setActive(false);
+    this.setDoubleClickZoom(false);
+    this.extending.set(from);
+
+    const draw = new Draw({
+      type: 'LineString',
+      // A linha já aparece pela camada; aqui só o cursor
+      style: (f) => (f.getGeometry() instanceof Point ? selectedStyle(f) : []),
+    });
+    draw.on('drawend', () => queueMicrotask(() => this.stopExtending(true)));
+    this.extendDraw = draw;
+    this.map.addInteraction(draw);
+    for (const l of this.layers()) {
+      if (!l.visible) continue;
+      const snap = new Snap({ source: l.olLayer.getSource()!, pixelTolerance: 8 });
+      this.extendSnaps.push(snap);
+      this.map.addInteraction(snap);
+    }
+    draw.extend(feature as Feature<LineString>);
+  }
+
+  private stopExtending(keep: boolean): void {
+    const feature = this.extendFeature;
+    const from = this.extending();
+    if (this.extendDraw) {
+      const draw = this.extendDraw;
+      this.extendDraw = undefined;
+      if (!keep) draw.abortDrawing();
+      this.map?.removeInteraction(draw);
+    }
+    this.extendSnaps.forEach((s) => this.map?.removeInteraction(s));
+    this.extendSnaps = [];
+
+    const geometry = feature?.getGeometry();
+    if (feature && geometry instanceof LineString) {
+      if (!keep && this.extendOriginal) {
+        geometry.setCoordinates(this.extendOriginal);
+      } else if (from === 'inicio') {
+        geometry.setCoordinates(geometry.getCoordinates().reverse());
+      }
+    }
+    feature?.unset('_invertida', true);
+    this.extendFeature = undefined;
+    this.extendOriginal = undefined;
+    this.extending.set(null);
+    this.select.setActive(true);
+    this.translate.setActive(true);
+    this.modify.setActive(true);
+    this.setDoubleClickZoom(true);
+    if (feature && this.layerOf(feature)) this.selectFeature(feature);
+    this.touch();
+  }
+
+  private setDoubleClickZoom(active: boolean): void {
+    this.map?.getInteractions().forEach((i) => i instanceof DoubleClickZoom && i.setActive(active));
   }
 
   // ---------- seleção ----------
