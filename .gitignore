@@ -42,3 +42,7 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Ferramentas locais
+/.agents/tools/node_modules
+/.agents/screenshots

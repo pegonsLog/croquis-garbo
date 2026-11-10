@@ -1,59 +1,51 @@
-# CroquisBh
+# Croquis BH
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.17.
+Editor de croquis sobre o mapa de Belo Horizonte, usando as camadas públicas do
+[BHMap](https://bhmap.pbh.gov.br/v2/home.html) (IDE-BHGEO / Prefeitura de Belo Horizonte).
 
-## Development server
-
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Comandos
 
 ```bash
-ng generate component component-name
+npm install
+npm start        # http://localhost:4200
+npm run build    # gera dist/croquis-bh/browser
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Como usar
 
-```bash
-ng generate --help
-```
+1. Cole um link do BHMap (ex.: `https://bhmap.pbh.gov.br/v2/mapa/idebhgeo#zoom=7&lat=7796089.13&lon=608484.19`)
+   no campo do topo e clique em **Ir**. Também aceita links do Google Maps (`@lat,lon,zoom`) e
+   coordenadas (`-19.92, -43.94`).
+2. Crie camadas no painel **Camadas**. A camada destacada recebe os objetos novos.
+3. Desenhe com as ferramentas: símbolo, texto, linha, seta, polígono, retângulo, círculo e imagem.
+4. Clique num objeto para editar cor, espessura, tracejado, preenchimento, tamanho, rotação,
+   rótulo e para trocá-lo de camada. Linhas e áreas mostram comprimento, área e perímetro.
+5. **Salvar** baixa um arquivo `.croqui.json`; **Abrir** carrega de volta. O croqui atual também
+   fica salvo automaticamente no navegador.
+6. **Exportar PNG** gera uma imagem do que está na tela, com escala gráfica.
 
-## Building
+Atalhos: `V` selecionar, `S` símbolo, `T` texto, `L` linha, `A` seta, `P` polígono, `R` retângulo,
+`C` círculo, `I` imagem, `Enter` termina o desenho, `Esc` cancela, `Delete` exclui,
+`Ctrl+D` duplica, `Ctrl+S` salva em arquivo.
 
-To build the project run:
+## Dados do BHMap
 
-```bash
-ng build
-```
+- Projeção: SIRGAS 2000 / UTM 23S (EPSG:31983), a mesma do BHMap. Medidas em metros.
+- Desenho das vias: WMS `ide_bhgeo:MEIO_FIO_QUADRA`.
+- Nomes das ruas: WFS `ide_bhgeo:LOGRADOURO` (nome desenhado ao longo do eixo; aparece com zoom).
+- Opcionais: `MAPA_BASE` (lotes e edificações) e `ORTOFOTO_2015`.
+- Serviços: `https://bhmap.pbh.gov.br/v2/api/idebhgeo/wms` e `/wfs`.
+- O zoom do link do BHMap é o índice na lista de resoluções do BHMap (`src/app/map/bhmap.ts`).
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Estrutura
 
-## Running unit tests
+- `src/app/croqui.store.ts`: estado do croqui, mapa OpenLayers, ferramentas, camadas, salvar/abrir/exportar.
+- `src/app/map/`: configuração do BHMap, estilos dos objetos e símbolos SVG.
+- `src/app/components/`: ferramentas, camadas, fundo, propriedades e formulário de estilo.
+- `.agents/tools/e2e-check.mjs`: teste de ponta a ponta com Playwright (servidor em `localhost:4300`).
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## Limitações atuais
 
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- Os croquis ficam no navegador e em arquivo; não há login nem armazenamento em nuvem.
+- Imagens são reduzidas para no máximo 1000 px e guardadas dentro do croqui.
+- Não há desfazer/refazer.
