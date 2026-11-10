@@ -52,6 +52,14 @@
             ],
             "styles": [
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "core-js",
+              "raf",
+              "rgbcolor",
+              "html2canvas",
+              "canvg",
+              "dompurify"
             ]
           },
           "configurations": {

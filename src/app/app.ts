@@ -35,6 +35,18 @@ export class App implements OnDestroy {
   protected readonly store = inject(CroquiStore);
   protected readonly icons = Icons;
   protected readonly link = signal('');
+  protected readonly exportOpen = signal(false);
+  protected readonly exportItems = [
+    { id: 'pdf-paisagem', label: 'PDF A4 paisagem', hint: 'Título, mapa, escala e créditos' },
+    { id: 'pdf-retrato', label: 'PDF A4 retrato', hint: 'Mesmo conteúdo, folha em pé' },
+    {
+      id: 'kmz',
+      label: 'KMZ (Google Earth / My Maps)',
+      hint: 'Com símbolos e imagens, uma pasta por camada',
+    },
+    { id: 'kml', label: 'KML simples', hint: 'Só texto; símbolos viram alfinetes coloridos' },
+    { id: 'png', label: 'Imagem PNG', hint: 'O que está na tela, com escala' },
+  ] as const;
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLElement>>('map');
   private readonly toolbar = viewChild.required(Toolbar);
@@ -49,6 +61,15 @@ export class App implements OnDestroy {
 
   protected goToLink(): void {
     if (this.store.goToLink(this.link())) this.link.set('');
+  }
+
+  protected runExport(id: (typeof this.exportItems)[number]['id']): void {
+    this.exportOpen.set(false);
+    if (id === 'pdf-paisagem') this.store.exportPdf('landscape');
+    else if (id === 'pdf-retrato') this.store.exportPdf('portrait');
+    else if (id === 'kmz') this.store.exportKml(true);
+    else if (id === 'kml') this.store.exportKml(false);
+    else this.store.exportPng();
   }
 
   protected openBhmap(): void {

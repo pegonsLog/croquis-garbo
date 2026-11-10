@@ -22,7 +22,12 @@ npm run build    # gera dist/croquis-bh/browser
    rótulo e para trocá-lo de camada. Linhas e áreas mostram comprimento, área e perímetro.
 5. **Salvar** baixa um arquivo `.croqui.json`; **Abrir** carrega de volta. O croqui atual também
    fica salvo automaticamente no navegador.
-6. **Exportar PNG** gera uma imagem do que está na tela, com escala gráfica.
+6. **Exportar** oferece:
+   - **PDF A4** (paisagem ou retrato): título, data, camadas, mapa, norte, escala gráfica e numérica e créditos do BHMap;
+   - **KMZ**: abre no Google Earth e no Google My Maps, com uma pasta por camada, cores, símbolos e imagens;
+   - **KML simples**: só texto; símbolos viram alfinetes coloridos e imagens não vão junto;
+   - **PNG**: o que está na tela, com escala.
+   No KMZ/KML não existe linha tracejada: as linhas tracejadas saem contínuas.
 
 Atalhos: `V` selecionar, `S` símbolo, `T` texto, `L` linha, `A` seta, `P` polígono, `R` retângulo,
 `C` círculo, `I` imagem, `Enter` termina o desenho, `Esc` cancela, `Delete` exclui,

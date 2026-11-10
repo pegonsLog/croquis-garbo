@@ -67,14 +67,39 @@
       >
         <svg [appIcon]="icons.Save" class="size-4"></svg> Salvar
       </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        title="Exportar imagem PNG"
-        (click)="store.exportPng()"
-      >
-        <svg [appIcon]="icons.ImageDown" class="size-4"></svg> Exportar PNG
-      </button>
+      <div class="relative">
+        <button
+          type="button"
+          class="btn btn-primary"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="exportOpen()"
+          [disabled]="store.exporting()"
+          (click)="exportOpen.set(!exportOpen())"
+        >
+          <svg [appIcon]="icons.Download" class="size-4"></svg>
+          {{ store.exporting() ? 'Gerando...' : 'Exportar' }}
+          <svg [appIcon]="icons.ChevronDown" class="size-3.5"></svg>
+        </button>
+        @if (exportOpen()) {
+          <div class="fixed inset-0 z-20" (click)="exportOpen.set(false)"></div>
+          <div
+            role="menu"
+            class="absolute right-0 top-full z-30 mt-1 w-72 rounded-md border border-gray-200 bg-white py-1 text-sm shadow-lg"
+          >
+            @for (item of exportItems; track item.id) {
+              <button
+                type="button"
+                role="menuitem"
+                class="block w-full px-3 py-2 text-left hover:bg-gray-50"
+                (click)="runExport(item.id)"
+              >
+                <span class="font-medium">{{ item.label }}</span>
+                <span class="block text-xs text-gray-500">{{ item.hint }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
     </div>
   </header>
 

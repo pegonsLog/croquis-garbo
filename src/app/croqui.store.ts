@@ -30,6 +30,7 @@ import {
   type CroquiProps,
   type FeatureKind,
 } from './map/styles';
+import { captureMap } from './export/capture';
 
 export type Tool = 'select' | FeatureKind;
 
@@ -766,53 +767,70 @@ export class CroquiStore {
     }
   }
 
-  /** Exporta o que está na tela como PNG (fundo + camadas visíveis). */
-  exportPng(): void {
-    if (!this.map) return;
-    const map: OlMap = this.map;
+  /** Exportação em andamento (para desabilitar o botão e mostrar aviso). */
+  readonly exporting = signal(false);
+
+  private async runExport(label: string, job: () => Promise<void>): Promise<void> {
+    if (!this.map || this.exporting()) return;
+    if (this.extending()) this.stopExtending(true);
+    if (this.tool() !== 'select') this.setTool('select');
     this.clearSelection();
-    map.once('rendercomplete', () => {
-      const size = map.getSize()!;
-      const ratio = window.devicePixelRatio || 1;
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(size[0] * ratio);
-      canvas.height = Math.round(size[1] * ratio);
+    this.exporting.set(true);
+    this.message.set(`Gerando ${label}...`);
+    try {
+      await job();
+      this.flash(`${label} gerado.`);
+    } catch (e) {
+      this.flash(e instanceof Error ? e.message : `Não foi possível gerar ${label}.`);
+    } finally {
+      this.exporting.set(false);
+    }
+  }
+
+  /** Exporta o que está na tela como PNG (fundo + camadas visíveis). */
+  exportPng(): Promise<void> {
+    return this.runExport('PNG', async () => {
+      const { canvas } = await captureMap(this.map!);
       const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      const canvases = map
-        .getViewport()!
-        .querySelectorAll<HTMLCanvasElement>(
-          '.ol-layer canvas, canvas.ol-layer, [class^="base-"] canvas',
-        );
-      canvases.forEach((layerCanvas) => {
-        if (layerCanvas.width === 0) return;
-        const container = layerCanvas.parentElement as HTMLElement;
-        const opacity = container.style.opacity || layerCanvas.style.opacity;
-        ctx.globalAlpha = opacity === '' ? 1 : Number(opacity);
-        ctx.filter = getComputedStyle(container).filter || 'none';
-        const m = layerCanvas.style.transform.match(/^matrix\(([^(]*)\)$/);
-        const matrix = m?.[1] ? m[1].split(',').map(Number) : [1, 0, 0, 1, 0, 0];
-        ctx.setTransform(
-          (matrix[0] * canvas.width) / layerCanvas.width,
-          matrix[1],
-          matrix[2],
-          (matrix[3] * canvas.height) / layerCanvas.height,
-          matrix[4] * ratio,
-          matrix[5] * ratio,
-        );
-        ctx.drawImage(layerCanvas, 0, 0);
-      });
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = 1;
-      ctx.filter = 'none';
+      const ratio = canvas.width / this.map!.getSize()![0];
       this.drawScaleAndNorth(ctx, canvas.width, canvas.height, ratio);
-      canvas.toBlob((blob) => {
-        if (blob) this.download(blob, `${this.fileName()}.png`);
-        else this.flash('Não foi possível gerar a imagem.');
-      });
+      const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'));
+      if (!blob) throw new Error('Não foi possível gerar a imagem.');
+      this.download(blob, `${this.fileName()}.png`);
     });
-    map.renderSync();
+  }
+
+  /** PDF A4 com título, mapa, escala e créditos. */
+  exportPdf(orientation: 'landscape' | 'portrait'): Promise<void> {
+    return this.runExport('PDF', async () => {
+      const layers = this.layers()
+        .filter((l) => l.visible)
+        .reverse()
+        .map((l) => ({ name: l.name, count: l.olLayer.getSource()!.getFeatures().length }));
+      const { buildPdf } = await import('./export/pdf');
+      const blob = await buildPdf(this.map!, { title: this.name(), orientation, layers });
+      this.download(blob, `${this.fileName()}.pdf`);
+    });
+  }
+
+  /** KMZ (com símbolos e imagens) ou KML puro, uma pasta por camada. */
+  exportKml(kmz: boolean): Promise<void> {
+    return this.runExport(kmz ? 'KMZ' : 'KML', async () => {
+      const layers = [...this.layers()].reverse().map((l) => ({
+        name: l.name,
+        visible: l.visible,
+        features: l.olLayer.getSource()!.getFeatures(),
+      }));
+      if (!layers.some((l) => l.features.length))
+        throw new Error('O croqui ainda não tem objetos.');
+      const { buildKml } = await import('./export/kml');
+      const blob = await buildKml(layers, {
+        name: this.name(),
+        resolution: this.map!.getView().getResolution() ?? 1,
+        kmz,
+      });
+      this.download(blob, `${this.fileName()}.${kmz ? 'kmz' : 'kml'}`);
+    });
   }
 
   /** Escala gráfica e título no canto da imagem exportada. */

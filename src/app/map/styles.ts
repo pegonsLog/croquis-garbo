@@ -2,6 +2,7 @@ import type { FeatureLike } from 'ol/Feature';
 import { LineString, MultiPoint, Point, Polygon } from 'ol/geom';
 import { Circle as CircleStyle, Fill, Icon, RegularShape, Stroke, Style, Text } from 'ol/style';
 import { BOTTOM_ANCHORED, symbolDataUrl } from './symbols';
+import { renderScale } from './render-scale';
 
 export type FeatureKind =
   'symbol' | 'image' | 'text' | 'line' | 'arrow' | 'polygon' | 'rectangle' | 'circle';
@@ -83,7 +84,7 @@ function arrowHead(geometry: LineString, p: CroquiProps, inverted = false): Styl
     geometry: new Point(end),
     image: new RegularShape({
       points: 3,
-      radius: 6 + p.width * 2,
+      radius: 6 * renderScale() + p.width * 2,
       fill: new Fill({ color: p.color }),
       rotation: Math.PI / 2 - angle,
       rotateWithView: true,
@@ -93,7 +94,10 @@ function arrowHead(geometry: LineString, p: CroquiProps, inverted = false): Styl
 
 /** Estilo dos objetos do croqui. */
 export function croquiStyle(feature: FeatureLike): Style[] {
-  const p = props(feature);
+  const k = renderScale();
+  const raw = props(feature);
+  // Tamanhos em pixels multiplicados pelo fator de impressão
+  const p = { ...raw, width: raw.width * k, size: raw.size * k, fontSize: raw.fontSize * k };
   const geometry = feature.getGeometry();
   const stroke = new Stroke({
     color: p.color,
@@ -113,7 +117,7 @@ export function croquiStyle(feature: FeatureLike): Style[] {
       icon.setScale(p.size / 48);
       icon.setRotation(rad(p.rotation));
       icon.setOpacity(p.opacity);
-      return [new Style({ image: icon }), ...labelStyle(p, -(p.size / 2) - 10)];
+      return [new Style({ image: icon }), ...labelStyle(p, -(p.size / 2) - 10 * k)];
     }
     case 'image': {
       if (!p.image) return [];
@@ -134,12 +138,12 @@ export function croquiStyle(feature: FeatureLike): Style[] {
             text: p.text || 'Texto',
             font: `600 ${p.fontSize}px system-ui, sans-serif`,
             fill: new Fill({ color: p.color }),
-            stroke: p.background ? undefined : new Stroke({ color: '#ffffff', width: 4 }),
+            stroke: p.background ? undefined : new Stroke({ color: '#ffffff', width: 4 * k }),
             backgroundFill: p.background
               ? new Fill({ color: 'rgba(255,255,255,0.92)' })
               : undefined,
-            backgroundStroke: p.background ? new Stroke({ color: p.color, width: 1 }) : undefined,
-            padding: p.background ? [3, 6, 3, 6] : undefined,
+            backgroundStroke: p.background ? new Stroke({ color: p.color, width: k }) : undefined,
+            padding: p.background ? [3 * k, 6 * k, 3 * k, 6 * k] : undefined,
             rotation: rad(p.rotation),
             rotateWithView: true,
           }),
@@ -165,15 +169,16 @@ export function croquiStyle(feature: FeatureLike): Style[] {
 /** Mostra o nome do objeto (se houver) junto da forma. */
 function labelStyle(p: CroquiProps, offsetY: number, placement: 'point' | 'line' = 'point') {
   if (!p.name) return [];
+  const k = renderScale();
   return [
     new Style({
       text: new Text({
         text: p.name,
         placement,
         offsetY,
-        font: '600 12px system-ui, sans-serif',
+        font: `600 ${12 * k}px system-ui, sans-serif`,
         fill: new Fill({ color: '#111827' }),
-        stroke: new Stroke({ color: '#ffffff', width: 3 }),
+        stroke: new Stroke({ color: '#ffffff', width: 3 * k }),
         overflow: true,
       }),
     }),

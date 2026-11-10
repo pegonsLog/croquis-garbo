@@ -9,6 +9,7 @@ import GeoJSON from 'ol/format/GeoJSON';
 import { bbox as bboxStrategy } from 'ol/loadingstrategy';
 import { Fill, Stroke, Style, Text } from 'ol/style';
 import type { FeatureLike } from 'ol/Feature';
+import { renderScale } from './render-scale';
 
 /** SIRGAS 2000 / UTM 23S, sistema usado pelo BHMap. */
 export const BH_PROJECTION = 'EPSG:31983';
@@ -140,20 +141,22 @@ function streetNameStyle(feature: FeatureLike): Style {
   const tipo = feature.get('TIPO_LOGRADOURO') ?? '';
   const nome = feature.get('NOME_LOGRADOURO') ?? '';
   const label = `${tipo} ${nome}`.trim();
-  let style = streetStyleCache.get(label);
+  const k = renderScale();
+  const key = `${k}|${label}`;
+  let style = streetStyleCache.get(key);
   if (!style) {
     style = new Style({
       text: new Text({
         text: label,
         placement: 'line',
-        font: '600 11px system-ui, sans-serif',
+        font: `600 ${11 * k}px system-ui, sans-serif`,
         fill: new Fill({ color: '#374151' }),
-        stroke: new Stroke({ color: '#ffffff', width: 3 }),
+        stroke: new Stroke({ color: '#ffffff', width: 3 * k }),
         overflow: false,
-        repeat: 450,
+        repeat: 450 * k,
       }),
     });
-    streetStyleCache.set(label, style);
+    streetStyleCache.set(key, style);
   }
   return style;
 }
