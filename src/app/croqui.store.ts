@@ -89,6 +89,7 @@ export class CroquiStore {
   readonly revision = signal(0);
   readonly base = signal<Record<BaseLayerId, boolean>>({
     meioFio: true,
+    alinhamento: true,
     nomes: true,
     mapaBase: false,
     ortofoto: false,
@@ -132,6 +133,7 @@ export class CroquiStore {
       layers: [
         this.baseLayers.ortofoto,
         this.baseLayers.mapaBase,
+        this.baseLayers.alinhamento,
         this.baseLayers.meioFio,
         this.baseLayers.nomes,
       ],

@@ -96,7 +96,7 @@ export function bhmapLink(center: number[], zoom: number): string {
   return `https://bhmap.pbh.gov.br/v2/mapa/idebhgeo#zoom=${z}&lat=${center[1].toFixed(5)}&lon=${center[0].toFixed(5)}&baselayer=base`;
 }
 
-export type BaseLayerId = 'meioFio' | 'nomes' | 'mapaBase' | 'ortofoto';
+export type BaseLayerId = 'meioFio' | 'alinhamento' | 'nomes' | 'mapaBase' | 'ortofoto';
 
 export interface BaseLayerInfo {
   id: BaseLayerId;
@@ -105,7 +105,12 @@ export interface BaseLayerInfo {
 }
 
 export const BASE_LAYERS: BaseLayerInfo[] = [
-  { id: 'meioFio', label: 'Desenho das vias', description: 'Meio-fio das quadras (BHMap)' },
+  { id: 'meioFio', label: 'Meio-fio', description: 'Borda da pista (MEIO_FIO_QUADRA)' },
+  {
+    id: 'alinhamento',
+    label: 'Linha interna da calçada',
+    description: 'Alinhamento das quadras (QUADRA_CTM)',
+  },
   { id: 'nomes', label: 'Nomes das ruas', description: 'Logradouros (BHMap)' },
   { id: 'mapaBase', label: 'Mapa base completo', description: 'Lotes e edificações' },
   { id: 'ortofoto', label: 'Ortofoto 2015', description: 'Foto aérea' },
@@ -177,6 +182,7 @@ export function createBaseLayers(visible: Record<BaseLayerId, boolean>) {
   return {
     ortofoto: wmsLayer('ORTOFOTO_2015', 'base-ortofoto', visible.ortofoto),
     mapaBase: wmsLayer('MAPA_BASE', 'base-mapa', visible.mapaBase),
+    alinhamento: wmsLayer('QUADRA_CTM', 'base-alinhamento', visible.alinhamento),
     meioFio: wmsLayer('MEIO_FIO_QUADRA', 'base-meio-fio', visible.meioFio),
     nomes: streetNamesLayer(visible.nomes),
   } satisfies Record<BaseLayerId, ImageLayer<ImageWMS> | VectorLayer>;

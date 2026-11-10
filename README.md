@@ -31,7 +31,8 @@ Atalhos: `V` selecionar, `S` símbolo, `T` texto, `L` linha, `A` seta, `P` polí
 ## Dados do BHMap
 
 - Projeção: SIRGAS 2000 / UTM 23S (EPSG:31983), a mesma do BHMap. Medidas em metros.
-- Desenho das vias: WMS `ide_bhgeo:MEIO_FIO_QUADRA`.
+- Meio-fio (borda da pista): WMS `ide_bhgeo:MEIO_FIO_QUADRA`.
+- Linha interna da calçada (alinhamento das quadras): WMS `ide_bhgeo:QUADRA_CTM`.
 - Nomes das ruas: WFS `ide_bhgeo:LOGRADOURO` (nome desenhado ao longo do eixo; aparece com zoom).
 - Opcionais: `MAPA_BASE` (lotes e edificações) e `ORTOFOTO_2015`.
 - Serviços: `https://bhmap.pbh.gov.br/v2/api/idebhgeo/wms` e `/wfs`.
