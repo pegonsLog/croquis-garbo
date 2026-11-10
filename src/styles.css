@@ -1,4 +1,11 @@
-@import 'tailwindcss';
+/*
+ * Fontes das classes declaradas explicitamente (relativas a este arquivo).
+ * Sem isso o Tailwind depende da pasta de onde o servidor foi iniciado e pode
+ * não gerar nenhuma classe utilitária (layout todo desmontado).
+ */
+@import 'tailwindcss' source(none);
+@source './app';
+@source './index.html';
 @import 'ol/ol.css';
 
 html,
