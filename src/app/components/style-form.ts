@@ -168,18 +168,48 @@ const SWATCHES = [
         </label>
       }
 
-      @if (isPoint()) {
-        <label class="field">
-          <span>Rotação: {{ p.rotation }}°</span>
-          <input
-            type="range"
-            min="-180"
-            max="180"
-            step="5"
-            [value]="p.rotation"
-            (input)="emit({ rotation: +$any($event.target).value })"
-          />
-        </label>
+      @if (isRotatable()) {
+        <div class="field">
+          <span>Rotação</span>
+          <div class="flex items-center gap-2">
+            <input
+              type="range"
+              class="min-w-0 flex-1"
+              min="-180"
+              max="180"
+              step="1"
+              [value]="p.rotation"
+              (input)="emit({ rotation: +$any($event.target).value })"
+            />
+            <input
+              type="number"
+              class="w-16 rounded-md border border-gray-300 px-1.5 py-0.5 text-sm"
+              min="-180"
+              max="180"
+              step="1"
+              [value]="p.rotation"
+              aria-label="Rotação em graus"
+              (change)="emit({ rotation: +$any($event.target).value || 0 })"
+            />
+            <span class="text-xs text-gray-500">°</span>
+          </div>
+          <div class="flex gap-1">
+            @for (step of [-90, -15, 15, 90]; track step) {
+              <button
+                type="button"
+                class="btn flex-1 justify-center px-1 py-0.5 text-xs"
+                (click)="emit({ rotation: p.rotation + step })"
+              >
+                {{ step > 0 ? '+' : '' }}{{ step }}°
+              </button>
+            }
+          </div>
+          @if (isShape()) {
+            <span class="font-normal"
+              >Ou arraste a alça azul acima do objeto (Shift: de 15 em 15°).</span
+            >
+          }
+        </div>
       }
 
       @if (kind() === 'symbol' || kind() === 'image') {
@@ -214,6 +244,14 @@ export class StyleForm {
     ['polygon', 'rectangle', 'circle'].includes(this.kind()),
   );
   protected readonly isPoint = computed(() => ['symbol', 'text', 'image'].includes(this.kind()));
+  protected readonly isShape = computed(() =>
+    ['line', 'arrow', 'polygon', 'rectangle'].includes(this.kind()),
+  );
+  /** O próximo desenho de forma sempre começa sem rotação, então só aparece ao editar. */
+  readonly editing = input(true);
+  protected readonly isRotatable = computed(
+    () => this.isPoint() || (this.isShape() && this.editing()),
+  );
 
   protected has(field: 'name'): boolean {
     return field === 'name' && this.showName() && this.kind() !== 'text';

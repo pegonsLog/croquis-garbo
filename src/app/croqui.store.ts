@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, signal, untracked } from '@angular/core';
 import OlMap from 'ol/Map';
 import View from 'ol/View';
 import Feature from 'ol/Feature';
@@ -31,6 +31,7 @@ import {
   type FeatureKind,
 } from './map/styles';
 import { captureMap } from './export/capture';
+import { RotateHandle, isRotatableShape, normalizeDeg, rotationCenter } from './map/rotate';
 
 export type Tool = 'select' | FeatureKind;
 
@@ -160,6 +161,14 @@ export class CroquiStore {
   private beforeModify = new WeakMap<Feature, number[][]>();
   private translate = new Translate({ features: this.select.getFeatures() });
   private draw?: Draw;
+  private rotateHandle?: RotateHandle;
+  /** Alça de rotação segue a seleção, o bloqueio das camadas e o modo prolongar. */
+  private readonly rotateSync = effect(() => {
+    this.selected();
+    this.layers();
+    this.extending();
+    untracked(() => this.syncRotateHandle());
+  });
   private extendDraw?: Draw;
   private extendSnaps: Snap[] = [];
   private snaps: Snap[] = [];
@@ -191,6 +200,11 @@ export class CroquiStore {
     this.map.addInteraction(this.select);
     this.map.addInteraction(this.translate);
     this.map.addInteraction(this.modify);
+    // Adicionada depois: recebe os eventos antes de mover/editar
+    this.rotateHandle = new RotateHandle(this.map, {
+      onRotate: (feature, deg) => feature.set('rotation', deg, true),
+      onEnd: () => this.touch(),
+    });
 
     this.select.on('select', () => {
       const feature = this.select.getFeatures().item(0) ?? null;
@@ -421,6 +435,8 @@ export class CroquiStore {
         ...this.drawProps(),
         kind,
         text: kind === 'text' ? this.drawProps().text || 'Texto' : '',
+        // Formas nascem sem rotação (a rotação delas é a da própria geometria)
+        ...(kind === 'symbol' || kind === 'text' || kind === 'image' ? {} : { rotation: 0 }),
         ...(kind === 'image' && pending
           ? { image: pending.src, imageWidth: pending.width, size: Math.min(240, pending.width) }
           : {}),
@@ -542,6 +558,13 @@ export class CroquiStore {
 
   // ---------- seleção ----------
 
+  private syncRotateHandle(): void {
+    const feature = this.selected();
+    const layer = feature ? this.layerOf(feature) : undefined;
+    const editable = !!layer && layer.visible && !layer.locked && !this.extending();
+    this.rotateHandle?.setFeature(editable ? feature : null);
+  }
+
   selectFeature(feature: Feature): void {
     const features = this.select.getFeatures();
     features.clear();
@@ -570,6 +593,14 @@ export class CroquiStore {
   updateSelected(patch: Partial<CroquiProps>): void {
     const feature = this.selected();
     if (!feature) return;
+    // Linha, seta, polígono e retângulo: a rotação gira a própria geometria
+    if (patch.rotation !== undefined && isRotatableShape(feature)) {
+      const geometry = feature.getGeometry()!;
+      const target = normalizeDeg(patch.rotation);
+      const delta = target - (Number(feature.get('rotation')) || 0);
+      if (delta) geometry.rotate((-delta * Math.PI) / 180, rotationCenter(geometry));
+      patch = { ...patch, rotation: target };
+    }
     feature.setProperties(patch);
     this.touch();
   }

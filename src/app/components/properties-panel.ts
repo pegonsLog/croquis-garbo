@@ -99,6 +99,7 @@ import { StyleForm } from './style-form';
         [props]="store.drawProps()"
         [kind]="kind"
         [showName]="false"
+        [editing]="false"
         (changed)="store.setDrawProps($event)"
       />
       <p class="mt-3 text-xs text-gray-500">
