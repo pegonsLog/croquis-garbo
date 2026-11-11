@@ -13,6 +13,8 @@
       (change)="store.setName($any($event.target).value)"
     />
 
+    <app-search-box class="w-80" />
+
     <form
       class="flex min-w-72 flex-1 items-center gap-1"
       (submit)="$event.preventDefault(); goToLink()"

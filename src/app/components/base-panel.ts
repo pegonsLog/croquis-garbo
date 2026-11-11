@@ -29,7 +29,7 @@ import { CroquiStore } from '../croqui.store';
         Vias em cinza
       </label>
     </div>
-    <p class="mt-2 text-xs text-gray-500">Os nomes aparecem ao aproximar o mapa.</p>
+    <p class="mt-2 text-xs text-gray-500">Os nomes das ruas aparecem ao aproximar o mapa.</p>
   `,
 })
 export class BasePanel {

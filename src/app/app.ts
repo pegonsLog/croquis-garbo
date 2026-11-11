@@ -13,6 +13,7 @@ import { Toolbar } from './components/toolbar';
 import { LayersPanel } from './components/layers-panel';
 import { BasePanel } from './components/base-panel';
 import { PropertiesPanel } from './components/properties-panel';
+import { SearchBox } from './components/search-box';
 
 const SHORTCUTS: Record<string, Tool> = {
   v: 'select',
@@ -27,7 +28,7 @@ const SHORTCUTS: Record<string, Tool> = {
 
 @Component({
   selector: 'app-root',
-  imports: [IconComponent, Toolbar, LayersPanel, BasePanel, PropertiesPanel],
+  imports: [IconComponent, Toolbar, LayersPanel, BasePanel, PropertiesPanel, SearchBox],
   templateUrl: './app.html',
   host: { '(document:keydown)': 'onKey($event)' },
 })

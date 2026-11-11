@@ -24,17 +24,20 @@ export interface CroquiProps {
   opacity: number;
   image?: string;
   imageWidth?: number;
-  /** Imagem presa ao mapa: cresce e diminui com o zoom, cobrindo sempre a mesma área. */
+  /** Imagem ou símbolo preso ao mapa: cresce e diminui com o zoom, cobrindo sempre a mesma área. */
   lockScale?: boolean;
   /** Resolução (m/pixel) em que `size` vale exatamente em pixels, quando `lockScale`. */
   refResolution?: number;
 }
 
-/** Limite do tamanho em pixels de uma imagem presa ao mapa, para não pesar no zoom máximo. */
+/** Objetos que podem ficar presos ao mapa. */
+export const LOCKABLE_KINDS: ReadonlySet<FeatureKind> = new Set(['image', 'symbol']);
+
+/** Limite do tamanho em pixels de um objeto preso ao mapa, para não pesar no zoom máximo. */
 const MAX_LOCKED_PX = 20000;
 
-/** Tamanho em pixels de tela de uma imagem presa ao mapa, na resolução dada. */
-export function lockedImagePx(p: Partial<CroquiProps>, resolution: number): number | null {
+/** Tamanho em pixels de tela de uma imagem ou símbolo preso ao mapa, na resolução dada. */
+export function lockedPx(p: Partial<CroquiProps>, resolution: number): number | null {
   if (!p.lockScale || !p.refResolution || !resolution) return null;
   return Math.min(MAX_LOCKED_PX, ((p.size ?? DEFAULT_PROPS.size) * p.refResolution) / resolution);
 }
@@ -127,10 +130,12 @@ export function croquiStyle(feature: FeatureLike, resolution?: number): Style[] 
         `s|${p.symbol}|${p.color}`,
         () => new Icon({ src: symbolDataUrl(p.symbol, p.color), anchor, rotateWithView: true }),
       ).clone();
-      icon.setScale(p.size / 48);
+      // Preso ao mapa: tamanho pela resolução (sem o fator de impressão, como na imagem)
+      const px = (resolution && lockedPx(raw, resolution)) ?? p.size;
+      icon.setScale(px / 48);
       icon.setRotation(rad(p.rotation));
       icon.setOpacity(p.opacity);
-      return [new Style({ image: icon }), ...labelStyle(p, -(p.size / 2) - 10 * k)];
+      return [new Style({ image: icon }), ...labelStyle(p, -(px / 2) - 10 * k)];
     }
     case 'image': {
       if (!p.image) return [];
@@ -141,7 +146,7 @@ export function croquiStyle(feature: FeatureLike, resolution?: number): Style[] 
       ).clone();
       // Presa ao mapa: o tamanho vem da resolução (na exportação a resolução já
       // acompanha os pixels extras, então o fator de impressão não entra)
-      const px = (resolution && lockedImagePx(raw, resolution)) ?? p.size;
+      const px = (resolution && lockedPx(raw, resolution)) ?? p.size;
       icon.setScale(px / (p.imageWidth || 400));
       icon.setRotation(rad(p.rotation));
       icon.setOpacity(p.opacity);

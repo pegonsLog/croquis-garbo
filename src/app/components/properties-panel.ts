@@ -96,7 +96,7 @@ import { StyleForm } from './style-form';
     } @else if (drawKind(); as kind) {
       <h2 class="panel-title mb-3">Novo {{ kindLabel(kind).toLowerCase() }}</h2>
       <app-style-form
-        [props]="store.drawProps()"
+        [props]="drawFormProps()"
         [kind]="kind"
         [showName]="false"
         [editing]="false"
@@ -137,6 +137,13 @@ export class PropertiesPanel {
   protected readonly drawKind = computed<FeatureKind | null>(() => {
     const tool = this.store.tool();
     return tool === 'select' ? null : tool;
+  });
+
+  /** Estilo do próximo desenho, com a opção "Preso ao mapa" do tipo escolhido. */
+  protected readonly drawFormProps = computed(() => {
+    const kind = this.drawKind();
+    const lock = kind === 'image' || kind === 'symbol' ? this.store.drawLock()[kind] : false;
+    return { ...this.store.drawProps(), lockScale: lock };
   });
 
   protected kindLabel(kind: CroquiProps['kind']): string {

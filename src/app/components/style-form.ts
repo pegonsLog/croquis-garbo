@@ -146,16 +146,16 @@ const SWATCHES = [
         </label>
       }
 
-      @if (kind() === 'image') {
+      @if (kind() === 'symbol' || kind() === 'image') {
         <label class="flex items-start gap-2">
           <input
             type="checkbox"
             class="mt-0.5"
-            [checked]="editing() ? !!p.lockScale : p.lockScale !== false"
+            [checked]="!!p.lockScale"
             (change)="emit({ lockScale: $any($event.target).checked })"
           />
           <span>
-            Presa ao mapa
+            {{ kind() === 'image' ? 'Presa' : 'Preso' }} ao mapa
             <span class="block text-xs text-gray-500"
               >Cresce e diminui com o zoom, cobrindo sempre a mesma área.</span
             >

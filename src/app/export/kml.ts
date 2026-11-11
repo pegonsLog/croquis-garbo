@@ -3,7 +3,7 @@ import { Geometry, LineString, Point, Polygon } from 'ol/geom';
 import { transform } from 'ol/proj';
 import { strToU8, zipSync } from 'fflate';
 import { BH_PROJECTION } from '../map/bhmap';
-import { DEFAULT_PROPS, KIND_LABELS, lockedImagePx, type CroquiProps } from '../map/styles';
+import { DEFAULT_PROPS, KIND_LABELS, lockedPx, type CroquiProps } from '../map/styles';
 import { BOTTOM_ANCHORED, SYMBOL_BY_ID, symbolDataUrl } from '../map/symbols';
 
 export interface KmlLayer {
@@ -126,7 +126,7 @@ export async function buildKml(layers: KmlLayer[], options: KmlOptions): Promise
         }
         name ||= 'Imagem';
         // Google Earth não muda o ícone com o zoom: usa o tamanho atual da tela
-        const px = lockedImagePx(p, options.resolution) ?? p.size;
+        const px = lockedPx(p, options.resolution) ?? p.size;
         style = `<IconStyle><scale>${(px / 32).toFixed(2)}</scale><heading>${p.rotation}</heading><Icon><href>${href}</href></Icon></IconStyle>`;
       } else {
         const href = await symbolHref(p.symbol, p.color);
@@ -137,7 +137,8 @@ export async function buildKml(layers: KmlLayer[], options: KmlOptions): Promise
           ? '<hotSpot x="0.5" y="0.04" xunits="fraction" yunits="fraction"/>'
           : '<hotSpot x="0.5" y="0.5" xunits="fraction" yunits="fraction"/>';
         const color = options.kmz ? '' : `<color>${kmlColor(p.color)}</color>`;
-        style = `<IconStyle>${color}<scale>${(p.size / 32).toFixed(2)}</scale><heading>${p.rotation}</heading><Icon><href>${href}</href></Icon>${hotSpot}</IconStyle>`;
+        const px = lockedPx(p, options.resolution) ?? p.size;
+        style = `<IconStyle>${color}<scale>${(px / 32).toFixed(2)}</scale><heading>${p.rotation}</heading><Icon><href>${href}</href></Icon>${hotSpot}</IconStyle>`;
       }
     } else if (geometry instanceof LineString) {
       const coords = geometry.getCoordinates();

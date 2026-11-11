@@ -7,6 +7,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
 import { bbox as bboxStrategy } from 'ol/loadingstrategy';
+import { MultiPolygon, Polygon } from 'ol/geom';
 import { Fill, Stroke, Style, Text } from 'ol/style';
 import type { FeatureLike } from 'ol/Feature';
 import { renderScale } from './render-scale';
@@ -97,7 +98,8 @@ export function bhmapLink(center: number[], zoom: number): string {
   return `https://bhmap.pbh.gov.br/v2/mapa/idebhgeo#zoom=${z}&lat=${center[1].toFixed(5)}&lon=${center[0].toFixed(5)}&baselayer=base`;
 }
 
-export type BaseLayerId = 'meioFio' | 'alinhamento' | 'nomes' | 'mapaBase' | 'ortofoto';
+export type BaseLayerId =
+  'meioFio' | 'alinhamento' | 'nomes' | 'bairroPopular' | 'mapaBase' | 'ortofoto';
 
 export interface BaseLayerInfo {
   id: BaseLayerId;
@@ -113,6 +115,11 @@ export const BASE_LAYERS: BaseLayerInfo[] = [
     description: 'Alinhamento das quadras (QUADRA_CTM)',
   },
   { id: 'nomes', label: 'Nomes das ruas', description: 'Logradouros (BHMap)' },
+  {
+    id: 'bairroPopular',
+    label: 'Bairros',
+    description: 'Nomes usados pela população (BAIRRO_POPULAR)',
+  },
   { id: 'mapaBase', label: 'Mapa base completo', description: 'Lotes e edificações' },
   { id: 'ortofoto', label: 'Ortofoto 2015', description: 'Foto aérea' },
 ];
@@ -180,6 +187,68 @@ function streetNamesLayer(visible: boolean) {
   });
 }
 
+/** Cores da camada de bairros (verde-azulado, pontilhado). */
+const BAIRRO_COLORS = {
+  BAIRRO_POPULAR: { line: 'rgba(13, 148, 136, 0.75)', text: '#115e59', dash: [2, 5] },
+};
+
+const bairroStyleCache = new Map<string, Style[]>();
+function bairroStyle(typeName: keyof typeof BAIRRO_COLORS) {
+  const c = BAIRRO_COLORS[typeName];
+  return (feature: FeatureLike): Style[] => {
+    const nome = feature.get('NOME') ?? '';
+    const k = renderScale();
+    const key = `${typeName}|${k}|${nome}`;
+    let styles = bairroStyleCache.get(key);
+    if (!styles) {
+      styles = [
+        new Style({
+          stroke: new Stroke({ color: c.line, width: 2 * k, lineDash: c.dash.map((d) => d * k) }),
+        }),
+        // Nome no meio de cada parte do bairro
+        new Style({
+          geometry: (f) => {
+            const g = f.getGeometry();
+            if (g instanceof MultiPolygon) return g.getInteriorPoints();
+            if (g instanceof Polygon) return g.getInteriorPoint();
+            return undefined;
+          },
+          text: new Text({
+            text: nome,
+            font: `700 ${12 * k}px system-ui, sans-serif`,
+            fill: new Fill({ color: c.text }),
+            stroke: new Stroke({ color: '#ffffff', width: 3.5 * k }),
+            overflow: true,
+          }),
+        }),
+      ];
+      bairroStyleCache.set(key, styles);
+    }
+    return styles;
+  };
+}
+
+/** Bairros (oficiais ou populares): contorno tracejado e nome, via WFS. */
+function bairrosLayer(typeName: keyof typeof BAIRRO_COLORS, className: string, visible: boolean) {
+  const source = new VectorSource({
+    format: new GeoJSON({ dataProjection: BH_PROJECTION, featureProjection: BH_PROJECTION }),
+    strategy: bboxStrategy,
+    url: (extent) =>
+      `${WFS_URL}?service=WFS&version=2.0.0&request=GetFeature&typeNames=ide_bhgeo:${typeName}` +
+      `&propertyName=NOME,GEOMETRIA` +
+      `&outputFormat=application/json&srsName=${BH_PROJECTION}&bbox=${extent.join(',')},${BH_PROJECTION}`,
+  });
+  return new VectorLayer({
+    className,
+    source,
+    style: bairroStyle(typeName),
+    declutter: true,
+    visible,
+    // Abaixo disso a cidade inteira já cabe na tela
+    maxResolution: 25,
+  });
+}
+
 /** Camadas de fundo, na ordem de desenho (a primeira fica embaixo). */
 export function createBaseLayers(visible: Record<BaseLayerId, boolean>) {
   return {
@@ -187,6 +256,19 @@ export function createBaseLayers(visible: Record<BaseLayerId, boolean>) {
     mapaBase: wmsLayer('MAPA_BASE', 'base-mapa', visible.mapaBase),
     alinhamento: wmsLayer('QUADRA_CTM', 'base-alinhamento', visible.alinhamento),
     meioFio: wmsLayer('MEIO_FIO_QUADRA', 'base-meio-fio', visible.meioFio),
+    bairroPopular: bairrosLayer('BAIRRO_POPULAR', 'base-bairro-popular', visible.bairroPopular),
     nomes: streetNamesLayer(visible.nomes),
   } satisfies Record<BaseLayerId, ImageLayer<ImageWMS> | VectorLayer>;
+}
+
+/** Monta uma URL de GetFeature do WFS do BHMap. */
+export function wfsUrl(params: Record<string, string>): string {
+  return `${WFS_URL}?${new URLSearchParams({
+    service: 'WFS',
+    version: '2.0.0',
+    request: 'GetFeature',
+    outputFormat: 'application/json',
+    srsName: BH_PROJECTION,
+    ...params,
+  })}`;
 }

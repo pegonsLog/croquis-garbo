@@ -12,6 +12,7 @@ import { fromCircle } from 'ol/geom/Polygon';
 import { ScaleLine, defaults as defaultControls } from 'ol/control';
 import type { Type as GeometryType } from 'ol/geom/Geometry';
 import type BaseLayer from 'ol/layer/Base';
+import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style';
 import {
   BASE_LAYERS,
   BH_CENTER,
@@ -26,7 +27,8 @@ import {
 import {
   DEFAULT_PROPS,
   croquiStyle,
-  lockedImagePx,
+  LOCKABLE_KINDS,
+  lockedPx,
   selectedStyle,
   type CroquiProps,
   type FeatureKind,
@@ -128,6 +130,7 @@ export class CroquiStore {
     meioFio: true,
     alinhamento: true,
     nomes: true,
+    bairroPopular: false,
     mapaBase: false,
     ortofoto: false,
   });
@@ -136,6 +139,11 @@ export class CroquiStore {
   readonly savedAt = signal<Date | null>(null);
   /** Configuração usada no próximo objeto desenhado. */
   readonly drawProps = signal<Omit<CroquiProps, 'kind'>>({ ...DEFAULT_PROPS });
+  /**
+   * Se as próximas imagens e símbolos nascem presos ao mapa. Imagens começam presas;
+   * símbolos começam com tamanho fixo na tela, como sempre foram.
+   */
+  readonly drawLock = signal<Record<'image' | 'symbol', boolean>>({ image: true, symbol: false });
   /** Imagem escolhida para a ferramenta "imagem". */
   readonly pendingImage = signal<{ src: string; width: number } | null>(null);
   /** Linha/seta sendo prolongada ('fim' ou 'inicio'), ou null. */
@@ -177,6 +185,26 @@ export class CroquiStore {
   private snaps: Snap[] = [];
   private saveTimer?: ReturnType<typeof setTimeout>;
   private loading = false;
+  /** Destaque do resultado da busca: fica acima de tudo e não entra na exportação. */
+  private searchHighlight = new VectorLayer({
+    className: 'busca-destaque',
+    source: new VectorSource(),
+    style: [
+      new Style({
+        stroke: new Stroke({ color: 'rgba(255, 255, 255, 0.9)', width: 9 }),
+        image: new CircleStyle({
+          radius: 11,
+          fill: new Fill({ color: 'rgba(234, 88, 12, 0.25)' }),
+          stroke: new Stroke({ color: '#ffffff', width: 5 }),
+        }),
+      }),
+      new Style({
+        stroke: new Stroke({ color: 'rgba(234, 88, 12, 0.85)', width: 5 }),
+        image: new CircleStyle({ radius: 11, stroke: new Stroke({ color: '#ea580c', width: 3 }) }),
+      }),
+    ],
+    zIndex: 1000,
+  });
 
   init(target: HTMLElement): void {
     this.map = new OlMap({
@@ -186,7 +214,9 @@ export class CroquiStore {
         this.baseLayers.mapaBase,
         this.baseLayers.alinhamento,
         this.baseLayers.meioFio,
+        this.baseLayers.bairroPopular,
         this.baseLayers.nomes,
+        this.searchHighlight,
       ],
       controls: defaultControls({ attribution: false }).extend([
         new ScaleLine({ units: 'metric', bar: true, steps: 4, text: true, minWidth: 120 }),
@@ -379,7 +409,12 @@ export class CroquiStore {
   }
 
   setDrawProps(patch: Partial<Omit<CroquiProps, 'kind'>>): void {
-    this.drawProps.update((p) => ({ ...p, ...patch }));
+    const { lockScale, ...rest } = patch;
+    const tool = this.tool();
+    // "Preso ao mapa" é guardado à parte para imagem e símbolo (padrões diferentes)
+    if (lockScale !== undefined && (tool === 'image' || tool === 'symbol'))
+      this.drawLock.update((l) => ({ ...l, [tool]: lockScale }));
+    this.drawProps.update((p) => ({ ...p, ...rest }));
   }
 
   /** Recria a interação de desenho conforme a ferramenta e a camada ativa. */
@@ -444,12 +479,12 @@ export class CroquiStore {
         // Formas nascem sem rotação (a rotação delas é a da própria geometria)
         ...(kind === 'symbol' || kind === 'text' || kind === 'image' ? {} : { rotation: 0 }),
         ...(kind === 'image' && pending
+          ? { image: pending.src, imageWidth: pending.width, size: Math.min(240, pending.width) }
+          : {}),
+        // Preso ao mapa no tamanho em que foi inserido (zoom atual como referência)
+        ...(kind === 'image' || kind === 'symbol'
           ? {
-              image: pending.src,
-              imageWidth: pending.width,
-              size: Math.min(240, pending.width),
-              // Por padrão a imagem fica presa ao mapa no tamanho em que foi inserida
-              lockScale: this.drawProps().lockScale ?? true,
+              lockScale: this.drawLock()[kind],
               refResolution: this.map?.getView().getResolution(),
             }
           : {}),
@@ -595,8 +630,8 @@ export class CroquiStore {
     const feature = this.selected();
     if (!feature) return null;
     const p = { ...DEFAULT_PROPS, ...(feature.getProperties() as CroquiProps) };
-    // Imagem presa ao mapa: o painel mostra o tamanho que ela tem agora na tela
-    const px = lockedImagePx(p, this.resolution());
+    // Imagem ou símbolo preso ao mapa: o painel mostra o tamanho que tem agora na tela
+    const px = lockedPx(p, this.resolution());
     return px === null ? p : { ...p, size: Math.round(px) };
   }
 
@@ -617,10 +652,10 @@ export class CroquiStore {
       if (delta) geometry.rotate((-delta * Math.PI) / 180, rotationCenter(geometry));
       patch = { ...patch, rotation: target };
     }
-    if (feature.get('kind') === 'image') {
+    if (LOCKABLE_KINDS.has(feature.get('kind'))) {
       const resolution = this.map?.getView().getResolution() ?? 1;
       const current = feature.getProperties() as Partial<CroquiProps>;
-      const px = lockedImagePx(current, resolution);
+      const px = lockedPx(current, resolution);
       // Tamanho editado no painel, ou trava ligada/desligada: parte do tamanho
       // atual na tela, para a imagem não pular de tamanho
       if (patch.lockScale === false && px !== null && patch.size === undefined)
@@ -702,6 +737,28 @@ export class CroquiStore {
     }
     this.map.getView().animate({ center: position.center, zoom: position.zoom, duration: 600 });
     return true;
+  }
+
+  // ---------- busca ----------
+
+  /** Destaca a geometria do resultado da busca (null apaga o destaque). */
+  highlightSearchResult(geometry: Geometry | null): void {
+    const source = this.searchHighlight.getSource()!;
+    source.clear();
+    if (geometry) source.addFeature(new Feature(geometry));
+  }
+
+  /** Enquadra o mapa no resultado da busca. */
+  goToExtent(extent: number[]): void {
+    if (!this.map) return;
+    const view = this.map.getView();
+    const isPoint = extent[0] === extent[2] && extent[1] === extent[3];
+    if (isPoint) {
+      // Endereço: zoom de quadra (índice 8 = 0,34 m/px, o mesmo do link do BHMap)
+      view.animate({ center: [extent[0], extent[1]], zoom: 8, duration: 600 });
+    } else {
+      view.fit(extent, { padding: [60, 60, 60, 60], maxZoom: 9, duration: 600 });
+    }
   }
 
   currentBhmapLink(): string {
