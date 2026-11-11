@@ -146,6 +146,23 @@ const SWATCHES = [
         </label>
       }
 
+      @if (kind() === 'image') {
+        <label class="flex items-start gap-2">
+          <input
+            type="checkbox"
+            class="mt-0.5"
+            [checked]="editing() ? !!p.lockScale : p.lockScale !== false"
+            (change)="emit({ lockScale: $any($event.target).checked })"
+          />
+          <span>
+            Presa ao mapa
+            <span class="block text-xs text-gray-500"
+              >Cresce e diminui com o zoom, cobrindo sempre a mesma área.</span
+            >
+          </span>
+        </label>
+      }
+
       @if (kind() === 'text') {
         <label class="field">
           <span>Tamanho da fonte: {{ p.fontSize }} px</span>

@@ -24,6 +24,19 @@ export interface CroquiProps {
   opacity: number;
   image?: string;
   imageWidth?: number;
+  /** Imagem presa ao mapa: cresce e diminui com o zoom, cobrindo sempre a mesma área. */
+  lockScale?: boolean;
+  /** Resolução (m/pixel) em que `size` vale exatamente em pixels, quando `lockScale`. */
+  refResolution?: number;
+}
+
+/** Limite do tamanho em pixels de uma imagem presa ao mapa, para não pesar no zoom máximo. */
+const MAX_LOCKED_PX = 20000;
+
+/** Tamanho em pixels de tela de uma imagem presa ao mapa, na resolução dada. */
+export function lockedImagePx(p: Partial<CroquiProps>, resolution: number): number | null {
+  if (!p.lockScale || !p.refResolution || !resolution) return null;
+  return Math.min(MAX_LOCKED_PX, ((p.size ?? DEFAULT_PROPS.size) * p.refResolution) / resolution);
 }
 
 export const DEFAULT_PROPS: Omit<CroquiProps, 'kind'> = {
@@ -93,7 +106,7 @@ function arrowHead(geometry: LineString, p: CroquiProps, inverted = false): Styl
 }
 
 /** Estilo dos objetos do croqui. */
-export function croquiStyle(feature: FeatureLike): Style[] {
+export function croquiStyle(feature: FeatureLike, resolution?: number): Style[] {
   const k = renderScale();
   const raw = props(feature);
   // Tamanhos em pixels multiplicados pelo fator de impressão
@@ -126,7 +139,10 @@ export function croquiStyle(feature: FeatureLike): Style[] {
         `i|${id}|${p.image.length}`,
         () => new Icon({ src: p.image, rotateWithView: true }),
       ).clone();
-      icon.setScale(p.size / (p.imageWidth || 400));
+      // Presa ao mapa: o tamanho vem da resolução (na exportação a resolução já
+      // acompanha os pixels extras, então o fator de impressão não entra)
+      const px = (resolution && lockedImagePx(raw, resolution)) ?? p.size;
+      icon.setScale(px / (p.imageWidth || 400));
       icon.setRotation(rad(p.rotation));
       icon.setOpacity(p.opacity);
       return [new Style({ image: icon })];
@@ -186,8 +202,8 @@ function labelStyle(p: CroquiProps, offsetY: number, placement: 'point' | 'line'
 }
 
 /** Estilo de seleção: o estilo normal + contorno azul e os vértices. */
-export function selectedStyle(feature: FeatureLike): Style[] {
-  const base = croquiStyle(feature);
+export function selectedStyle(feature: FeatureLike, resolution?: number): Style[] {
+  const base = croquiStyle(feature, resolution);
   const geometry = feature.getGeometry();
   const halo = new Stroke({ color: 'rgba(37, 99, 235, 0.55)', width: 2 });
   const extra: Style[] = [];

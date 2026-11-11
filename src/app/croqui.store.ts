@@ -26,6 +26,7 @@ import {
 import {
   DEFAULT_PROPS,
   croquiStyle,
+  lockedImagePx,
   selectedStyle,
   type CroquiProps,
   type FeatureKind,
@@ -121,6 +122,8 @@ export class CroquiStore {
   readonly selected = signal<Feature | null>(null);
   /** Incrementado a cada mudança no objeto selecionado (para o painel reler as propriedades). */
   readonly revision = signal(0);
+  /** Resolução atual da tela (m/pixel), atualizada ao fim de cada zoom. */
+  private readonly resolution = signal(1);
   readonly base = signal<Record<BaseLayerId, boolean>>({
     meioFio: true,
     alinhamento: true,
@@ -229,7 +232,10 @@ export class CroquiStore {
     });
     this.translate.on('translateend', () => this.touch());
     this.map.getView().on('change:resolution', () => this.scheduleSave());
-    this.map.on('moveend', () => this.scheduleSave());
+    this.map.on('moveend', () => {
+      this.resolution.set(this.map?.getView().getResolution() ?? 1);
+      this.scheduleSave();
+    });
 
     if (!this.restore()) this.newCroqui();
     this.applyGray();
@@ -438,7 +444,14 @@ export class CroquiStore {
         // Formas nascem sem rotação (a rotação delas é a da própria geometria)
         ...(kind === 'symbol' || kind === 'text' || kind === 'image' ? {} : { rotation: 0 }),
         ...(kind === 'image' && pending
-          ? { image: pending.src, imageWidth: pending.width, size: Math.min(240, pending.width) }
+          ? {
+              image: pending.src,
+              imageWidth: pending.width,
+              size: Math.min(240, pending.width),
+              // Por padrão a imagem fica presa ao mapa no tamanho em que foi inserida
+              lockScale: this.drawProps().lockScale ?? true,
+              refResolution: this.map?.getView().getResolution(),
+            }
           : {}),
       });
       // Objetos pontuais (símbolo, texto, imagem): seleciona para editar logo em seguida
@@ -581,7 +594,10 @@ export class CroquiStore {
     this.revision();
     const feature = this.selected();
     if (!feature) return null;
-    return { ...DEFAULT_PROPS, ...(feature.getProperties() as CroquiProps) };
+    const p = { ...DEFAULT_PROPS, ...(feature.getProperties() as CroquiProps) };
+    // Imagem presa ao mapa: o painel mostra o tamanho que ela tem agora na tela
+    const px = lockedImagePx(p, this.resolution());
+    return px === null ? p : { ...p, size: Math.round(px) };
   }
 
   selectedLayerId(): string | null {
@@ -600,6 +616,17 @@ export class CroquiStore {
       const delta = target - (Number(feature.get('rotation')) || 0);
       if (delta) geometry.rotate((-delta * Math.PI) / 180, rotationCenter(geometry));
       patch = { ...patch, rotation: target };
+    }
+    if (feature.get('kind') === 'image') {
+      const resolution = this.map?.getView().getResolution() ?? 1;
+      const current = feature.getProperties() as Partial<CroquiProps>;
+      const px = lockedImagePx(current, resolution);
+      // Tamanho editado no painel, ou trava ligada/desligada: parte do tamanho
+      // atual na tela, para a imagem não pular de tamanho
+      if (patch.lockScale === false && px !== null && patch.size === undefined)
+        patch = { ...patch, size: Math.round(px) };
+      if (patch.lockScale === true || (patch.size !== undefined && px !== null))
+        patch = { ...patch, refResolution: resolution };
     }
     feature.setProperties(patch);
     this.touch();
