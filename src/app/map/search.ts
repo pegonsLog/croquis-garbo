@@ -191,7 +191,7 @@ async function searchStreets(q: ParsedQuery, signal: AbortSignal): Promise<Searc
       return {
         kind: 'rua',
         title: t,
-        detail: bairro ? `Rua no bairro ${bairro}` : 'Logradouro',
+        detail: bairro,
         extent: f.bbox!,
         typeName: 'ide_bhgeo:LOGRADOURO',
         featureId: f.id,

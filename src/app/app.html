@@ -1,40 +1,66 @@
 <div class="flex h-dvh flex-col bg-gray-100 text-gray-900">
   <!-- Barra superior -->
-  <header class="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-2">
-    <div class="flex items-center gap-2 pr-2">
-      <svg [appIcon]="icons.Map" class="size-6 text-blue-600"></svg>
-      <span class="font-semibold">Croquis GARBO</span>
+  <header
+    class="ui relative z-30 flex h-14 shrink-0 items-center gap-2.5 border-b border-slate-200 bg-white px-4"
+  >
+    <div class="flex shrink-0 items-center gap-2.5">
+      <span
+        class="grid size-8 place-items-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-sm shadow-blue-600/30 ring-1 ring-white/20 ring-inset"
+      >
+        <svg [appIcon]="icons.Map" class="size-[18px]"></svg>
+      </span>
+      <span class="text-[15px] font-semibold tracking-tight whitespace-nowrap text-slate-900">
+        Croquis <span class="text-blue-600">GARBO</span>
+      </span>
     </div>
 
-    <input
-      class="w-56 rounded-md border border-transparent px-2 py-1 font-medium hover:border-gray-300 focus:border-blue-500"
-      aria-label="Nome do croqui"
-      [value]="store.name()"
-      (change)="store.setName($any($event.target).value)"
-    />
+    <span class="h-6 w-px shrink-0 bg-slate-200" aria-hidden="true"></span>
 
-    <app-search-box class="w-80" />
+    <label class="group relative flex w-36 shrink-0 items-center xl:w-44" title="Nome do croqui">
+      <input
+        class="h-9 w-full truncate rounded-lg border border-transparent bg-transparent pr-8 pl-2.5 text-sm font-semibold text-slate-800 transition outline-none hover:bg-slate-100 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/15"
+        aria-label="Nome do croqui"
+        [value]="store.name()"
+        (change)="store.setName($any($event.target).value)"
+      />
+      <svg
+        [appIcon]="icons.Pencil"
+        class="pointer-events-none absolute right-2.5 size-3.5 text-slate-400 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-0"
+      ></svg>
+    </label>
+
+    <app-search-box class="max-w-[26rem] min-w-0 flex-1" />
 
     <form
-      class="flex min-w-72 flex-1 items-center gap-1"
+      class="flex max-w-[28rem] min-w-0 flex-[1.2] items-center gap-1"
       (submit)="$event.preventDefault(); goToLink()"
     >
-      <div class="relative flex-1">
+      <div class="relative min-w-0 flex-1">
         <svg
           [appIcon]="icons.Link"
-          class="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+          class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
         ></svg>
         <input
-          class="w-full rounded-md border border-gray-300 py-1.5 pl-8 pr-2 text-sm"
-          placeholder="Cole um link do BHMap (ou Google Maps / coordenadas) para ir até o local"
+          class="input-soft pl-9"
+          [class.pr-3]="!link().trim()"
+          [class.pr-12]="link().trim()"
+          placeholder="Cole um link do BHMap ou coordenadas"
+          title="Link do BHMap ou do Google Maps, ou coordenadas (ex.: -19.92, -43.94)"
           [value]="link()"
           (input)="link.set($any($event.target).value)"
         />
+        @if (link().trim()) {
+          <button
+            type="submit"
+            class="menu-pop absolute top-1/2 right-1 h-7 -translate-y-1/2 rounded-md bg-blue-600 px-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700"
+          >
+            Ir
+          </button>
+        }
       </div>
-      <button type="submit" class="btn btn-primary" [disabled]="!link().trim()">Ir</button>
       <button
         type="button"
-        class="icon-btn"
+        class="icon-btn size-9 shrink-0"
         title="Abrir este local no BHMap"
         (click)="openBhmap()"
       >
@@ -42,33 +68,39 @@
       </button>
     </form>
 
-    <div class="flex items-center gap-1">
-      <button type="button" class="btn" title="Novo croqui" (click)="newCroqui()">
-        <svg [appIcon]="icons.FilePlus" class="size-4"></svg> Novo
-      </button>
-      <input
-        #openInput
-        type="file"
-        accept=".json,application/json"
-        class="hidden"
-        (change)="open(openInput)"
-      />
-      <button
-        type="button"
-        class="btn"
-        title="Abrir arquivo .croqui.json"
-        (click)="openInput.click()"
-      >
-        <svg [appIcon]="icons.FolderOpen" class="size-4"></svg> Abrir
-      </button>
-      <button
-        type="button"
-        class="btn"
-        title="Salvar em arquivo (Ctrl+S)"
-        (click)="store.downloadFile()"
-      >
-        <svg [appIcon]="icons.Save" class="size-4"></svg> Salvar
-      </button>
+    <div class="ml-auto flex shrink-0 items-center gap-2">
+      <div class="toolbar-group">
+        <button type="button" class="toolbar-btn" title="Novo croqui" (click)="newCroqui()">
+          <svg [appIcon]="icons.FilePlus" class="size-4"></svg>
+          <span class="hidden min-[1400px]:inline">Novo</span>
+        </button>
+        <input
+          #openInput
+          type="file"
+          accept=".json,application/json"
+          class="hidden"
+          (change)="open(openInput)"
+        />
+        <button
+          type="button"
+          class="toolbar-btn"
+          title="Abrir arquivo .croqui.json"
+          (click)="openInput.click()"
+        >
+          <svg [appIcon]="icons.FolderOpen" class="size-4"></svg>
+          <span class="hidden min-[1400px]:inline">Abrir</span>
+        </button>
+        <button
+          type="button"
+          class="toolbar-btn"
+          title="Salvar em arquivo (Ctrl+S)"
+          (click)="store.downloadFile()"
+        >
+          <svg [appIcon]="icons.Save" class="size-4"></svg>
+          <span class="hidden min-[1400px]:inline">Salvar</span>
+        </button>
+      </div>
+
       <div class="relative">
         <button
           type="button"
@@ -78,25 +110,43 @@
           [disabled]="store.exporting()"
           (click)="exportOpen.set(!exportOpen())"
         >
-          <svg [appIcon]="icons.Download" class="size-4"></svg>
-          {{ store.exporting() ? 'Gerando...' : 'Exportar' }}
-          <svg [appIcon]="icons.ChevronDown" class="size-3.5"></svg>
+          @if (store.exporting()) {
+            <svg [appIcon]="icons.LoaderCircle" class="size-4 animate-spin"></svg>
+            Gerando...
+          } @else {
+            <svg [appIcon]="icons.Download" class="size-4"></svg>
+            Exportar
+            <svg
+              [appIcon]="icons.ChevronDown"
+              class="-mr-0.5 size-3.5 opacity-80 transition"
+              [class.rotate-180]="exportOpen()"
+            ></svg>
+          }
         </button>
         @if (exportOpen()) {
           <div class="fixed inset-0 z-20" (click)="exportOpen.set(false)"></div>
           <div
             role="menu"
-            class="absolute right-0 top-full z-30 mt-1 w-72 rounded-md border border-gray-200 bg-white py-1 text-sm shadow-lg"
+            class="menu-pop absolute top-full right-0 z-30 mt-2 w-[23rem] origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10"
           >
+            <p class="section-title px-2.5 pt-1.5 pb-1">Exportar como</p>
             @for (item of exportItems; track item.id) {
               <button
                 type="button"
                 role="menuitem"
-                class="block w-full px-3 py-2 text-left hover:bg-gray-50"
+                class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition hover:bg-slate-50"
                 (click)="runExport(item.id)"
               >
-                <span class="font-medium">{{ item.label }}</span>
-                <span class="block text-xs text-gray-500">{{ item.hint }}</span>
+                <span
+                  class="grid size-9 shrink-0 place-items-center rounded-lg"
+                  [class]="item.tone"
+                >
+                  <svg [appIcon]="item.icon" class="size-[18px]"></svg>
+                </span>
+                <span class="min-w-0">
+                  <span class="block text-sm font-medium text-slate-800">{{ item.label }}</span>
+                  <span class="block text-xs text-slate-500">{{ item.hint }}</span>
+                </span>
               </button>
             }
           </div>
@@ -107,15 +157,19 @@
 
   <div class="flex min-h-0 flex-1">
     <!-- Lateral esquerda -->
-    <aside class="w-72 shrink-0 space-y-4 overflow-y-auto border-r border-gray-200 bg-white p-3">
-      <section>
-        <h2 class="panel-title mb-2">Ferramentas</h2>
+    <aside
+      class="ui scroll-thin w-72 shrink-0 divide-y divide-slate-100 overflow-y-auto border-r border-slate-200 bg-white"
+    >
+      <section class="p-4">
+        <h2 class="section-title mb-3">
+          <svg [appIcon]="icons.PenTool" class="size-3.5"></svg> Ferramentas
+        </h2>
         <app-toolbar />
       </section>
-      <section class="border-t border-gray-100 pt-3">
+      <section class="p-4">
         <app-layers-panel />
       </section>
-      <section class="border-t border-gray-100 pt-3">
+      <section class="p-4">
         <app-base-panel />
       </section>
     </aside>
@@ -130,50 +184,64 @@
 
       @if (store.extending(); as from) {
         <div
-          class="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-3 rounded-md bg-blue-600 px-3 py-2 text-sm text-white shadow"
+          class="ui menu-pop absolute top-3 left-1/2 z-10 flex w-max max-w-[min(42rem,calc(100%-6rem))] -translate-x-1/2 items-center gap-3 rounded-xl bg-blue-600 py-2 pr-2 pl-3.5 text-sm text-white shadow-lg shadow-blue-950/25 ring-1 ring-white/10"
         >
-          <span>
+          <span class="flex items-center gap-2">
+            <svg [appIcon]="icons.Spline" class="size-4 shrink-0 text-blue-100"></svg>
             Prolongando {{ from === 'inicio' ? 'pelo início' : 'pelo fim' }}: clique para
             acrescentar pontos e dê dois cliques (ou Enter) para terminar.
           </span>
-          <button
-            type="button"
-            class="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30"
-            (click)="store.finishDrawing()"
-          >
-            Concluir
-          </button>
-          <button
-            type="button"
-            class="rounded bg-white/20 px-2 py-0.5 hover:bg-white/30"
-            (click)="store.cancelDrawing()"
-          >
-            Cancelar
-          </button>
+          <span class="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              class="rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-xs transition hover:bg-blue-50"
+              (click)="store.finishDrawing()"
+            >
+              Concluir
+            </button>
+            <button
+              type="button"
+              class="rounded-lg px-2.5 py-1 text-xs font-medium text-white/90 transition hover:bg-white/15 hover:text-white"
+              (click)="store.cancelDrawing()"
+            >
+              Cancelar
+            </button>
+          </span>
         </div>
       } @else if (store.message(); as message) {
         <div
           role="status"
-          class="absolute left-1/2 top-3 z-10 -translate-x-1/2 rounded-md bg-gray-900/90 px-3 py-2 text-sm text-white shadow"
+          class="ui menu-pop absolute top-3 left-1/2 z-10 flex w-max max-w-[min(42rem,calc(100%-6rem))] -translate-x-1/2 items-center gap-2 rounded-xl bg-slate-900/90 py-2 pr-3.5 pl-3 text-sm text-white shadow-lg shadow-slate-950/20 ring-1 ring-white/10 backdrop-blur-sm"
         >
+          <svg [appIcon]="icons.Info" class="size-4 shrink-0 text-blue-300"></svg>
           {{ message }}
         </div>
       }
 
       @if (store.activeLayer(); as layer) {
         <div
-          class="absolute bottom-3 right-3 z-10 rounded-md bg-white/90 px-2 py-1 text-xs text-gray-600 shadow"
+          class="ui absolute right-3 bottom-3 z-10 flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 py-1 pr-3 pl-2.5 text-xs text-slate-500 shadow-sm backdrop-blur-sm"
         >
-          Desenhando em <strong>{{ layer.name }}</strong>
+          <span class="size-2 rounded-full bg-blue-600 ring-2 ring-blue-600/20"></span>
+          <span
+            >Desenhando em
+            <strong class="font-semibold text-slate-800">{{ layer.name }}</strong></span
+          >
           @if (store.savedAt(); as saved) {
-            · salvo no navegador às {{ saved.toLocaleTimeString('pt-BR') }}
+            <span class="h-3 w-px bg-slate-200" aria-hidden="true"></span>
+            <span class="flex items-center gap-1">
+              <svg [appIcon]="icons.Check" class="size-3.5 text-emerald-600"></svg>
+              salvo no navegador às {{ saved.toLocaleTimeString('pt-BR') }}
+            </span>
           }
         </div>
       }
     </main>
 
     <!-- Lateral direita -->
-    <aside class="w-72 shrink-0 overflow-y-auto border-l border-gray-200 bg-white p-3">
+    <aside
+      class="ui scroll-thin w-72 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-4"
+    >
       <app-properties-panel />
     </aside>
   </div>

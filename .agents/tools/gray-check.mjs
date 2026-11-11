@@ -32,6 +32,9 @@ const bluePixels = (buffer) =>
     return blue;
   }, buffer.toString('base64'));
 
+// Avisos sobre o mapa (selo "Desenhando em", com a bolinha azul) não contam: só o mapa
+const withNotices = await bluePixels(await page.locator('main').screenshot());
+await page.addStyleTag({ content: 'main > .ui { visibility: hidden !important; }' });
 const mapShot = await page.locator('main').screenshot();
 const filters = await page.evaluate(() =>
   ['.base-meio-fio', '.base-alinhamento'].map((s) => getComputedStyle(document.querySelector(s)).filter),
@@ -47,6 +50,7 @@ const { readFileSync } = await import('node:fs');
 console.log(
   JSON.stringify({
     filters,
+    bluePixelsWithNotices: withNotices,
     bluePixelsScreen: await bluePixels(mapShot),
     bluePixelsExport: await bluePixels(readFileSync(path)),
     problems,

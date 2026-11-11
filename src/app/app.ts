@@ -38,15 +38,41 @@ export class App implements OnDestroy {
   protected readonly link = signal('');
   protected readonly exportOpen = signal(false);
   protected readonly exportItems = [
-    { id: 'pdf-paisagem', label: 'PDF A4 paisagem', hint: 'Título, mapa, escala e créditos' },
-    { id: 'pdf-retrato', label: 'PDF A4 retrato', hint: 'Mesmo conteúdo, folha em pé' },
+    {
+      id: 'pdf-paisagem',
+      label: 'PDF A4 paisagem',
+      hint: 'Título, mapa, escala e créditos',
+      icon: Icons.RectangleHorizontal,
+      tone: 'bg-rose-50 text-rose-600',
+    },
+    {
+      id: 'pdf-retrato',
+      label: 'PDF A4 retrato',
+      hint: 'Mesmo conteúdo, folha em pé',
+      icon: Icons.RectangleVertical,
+      tone: 'bg-rose-50 text-rose-600',
+    },
     {
       id: 'kmz',
       label: 'KMZ (Google Earth / My Maps)',
       hint: 'Com símbolos e imagens, uma pasta por camada',
+      icon: Icons.Globe,
+      tone: 'bg-emerald-50 text-emerald-600',
     },
-    { id: 'kml', label: 'KML simples', hint: 'Só texto; símbolos viram alfinetes coloridos' },
-    { id: 'png', label: 'Imagem PNG', hint: 'O que está na tela, com escala' },
+    {
+      id: 'kml',
+      label: 'KML simples',
+      hint: 'Só texto; símbolos viram alfinetes coloridos',
+      icon: Icons.FileCode,
+      tone: 'bg-teal-50 text-teal-600',
+    },
+    {
+      id: 'png',
+      label: 'Imagem PNG',
+      hint: 'O que está na tela, com escala',
+      icon: Icons.ImageDown,
+      tone: 'bg-violet-50 text-violet-600',
+    },
   ] as const;
 
   private readonly mapEl = viewChild.required<ElementRef<HTMLElement>>('map');
@@ -61,6 +87,7 @@ export class App implements OnDestroy {
   }
 
   protected goToLink(): void {
+    if (!this.link().trim()) return;
     if (this.store.goToLink(this.link())) this.link.set('');
   }
 

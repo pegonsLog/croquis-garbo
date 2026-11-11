@@ -1,12 +1,13 @@
 import { Component, OnDestroy, inject, signal } from '@angular/core';
+import type { IconNode } from 'lucide';
 import { CroquiStore } from '../croqui.store';
 import { IconComponent, Icons } from '../shared/icon';
 import { parseQuery, resultGeometry, search, type SearchResult } from '../map/search';
 
-const KIND_LABELS: Record<SearchResult['kind'], string> = {
-  endereco: 'Endereço',
-  rua: 'Rua',
-  bairro: 'Bairro',
+const KINDS: Record<SearchResult['kind'], { label: string; icon: IconNode; tone: string }> = {
+  endereco: { label: 'Endereço', icon: Icons.MapPin, tone: 'bg-orange-50 text-orange-600' },
+  rua: { label: 'Rua', icon: Icons.Signpost, tone: 'bg-blue-50 text-blue-600' },
+  bairro: { label: 'Bairro', icon: Icons.LandPlot, tone: 'bg-teal-50 text-teal-600' },
 };
 
 /** Busca de rua, endereço (rua + número) ou bairro no WFS do BHMap. */
@@ -17,11 +18,12 @@ const KIND_LABELS: Record<SearchResult['kind'], string> = {
   template: `
     <svg
       [appIcon]="icons.Search"
-      class="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+      class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
     ></svg>
     <input
-      class="w-full rounded-md border border-gray-300 py-1.5 pl-8 pr-7 text-sm"
-      placeholder="Buscar rua, endereço (rua e número) ou bairro"
+      class="input-soft pr-8 pl-9"
+      placeholder="Buscar rua, endereço ou bairro"
+      title="Ex.: Rua da Bahia · Av. Afonso Pena, 1500 · Savassi"
       aria-label="Buscar rua, endereço ou bairro"
       role="combobox"
       aria-autocomplete="list"
@@ -35,7 +37,7 @@ const KIND_LABELS: Record<SearchResult['kind'], string> = {
     @if (query()) {
       <button
         type="button"
-        class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-700"
+        class="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-md p-1 text-slate-400 transition hover:bg-slate-200/70 hover:text-slate-700"
         title="Limpar busca"
         (mousedown)="$event.preventDefault()"
         (click)="clear()"
@@ -46,32 +48,37 @@ const KIND_LABELS: Record<SearchResult['kind'], string> = {
     @if (open() && (results().length || status())) {
       <ul
         role="listbox"
-        class="absolute left-0 right-0 top-full z-30 mt-1 max-h-96 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 text-sm shadow-lg"
+        class="menu-pop scroll-thin absolute top-full left-0 z-30 mt-2 max-h-[26rem] w-[max(100%,24rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 text-sm shadow-xl shadow-slate-900/10"
       >
         @for (r of results(); track $index) {
+          @let k = kinds[r.kind];
           <li
             role="option"
             [attr.aria-selected]="$index === active()"
-            class="flex cursor-pointer items-baseline gap-2 px-3 py-1.5"
-            [class.bg-blue-50]="$index === active()"
+            class="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors"
+            [class.bg-slate-100]="$index === active()"
             (mousedown)="$event.preventDefault()"
             (mouseenter)="active.set($index)"
             (click)="choose(r)"
           >
-            <span
-              class="w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400"
-              >{{ kindLabel(r.kind) }}</span
-            >
-            <span class="min-w-0">
-              <span class="block truncate font-medium">{{ r.title }}</span>
-              @if (r.detail) {
-                <span class="block truncate text-xs text-gray-500">{{ r.detail }}</span>
-              }
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg" [class]="k.tone">
+              <svg [appIcon]="k.icon" class="size-4"></svg>
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium text-slate-800">{{ r.title }}</span>
+              <span class="block truncate text-xs text-slate-500"
+                >{{ k.label }}{{ r.detail ? ' · ' + r.detail : '' }}</span
+              >
             </span>
           </li>
         }
         @if (status(); as s) {
-          <li class="px-3 py-1.5 text-xs text-gray-500">{{ s }}</li>
+          <li class="flex items-center gap-2 px-2.5 py-2 text-xs text-slate-500">
+            @if (s === 'Buscando...') {
+              <svg [appIcon]="icons.LoaderCircle" class="size-3.5 animate-spin text-blue-500"></svg>
+            }
+            {{ s }}
+          </li>
         }
       </ul>
     }
@@ -94,9 +101,7 @@ export class SearchBox implements OnDestroy {
     this.controller?.abort();
   }
 
-  protected kindLabel(kind: SearchResult['kind']): string {
-    return KIND_LABELS[kind];
-  }
+  protected readonly kinds = KINDS;
 
   protected onInput(value: string): void {
     this.query.set(value);

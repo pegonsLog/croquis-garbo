@@ -116,9 +116,10 @@ const saved = await page.evaluate(() => {
 });
 
 // Exporta PNG
+await page.click('header button[aria-haspopup="menu"]');
 const [download] = await Promise.all([
   page.waitForEvent('download', { timeout: 30000 }),
-  page.click('header button:has-text("Exportar PNG")'),
+  page.click('[role=menuitem]:has-text("Imagem PNG")'),
 ]);
 await download.saveAs(`${OUT}/05-export.png`);
 

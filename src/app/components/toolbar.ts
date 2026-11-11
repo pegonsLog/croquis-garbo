@@ -38,37 +38,35 @@ function readImage(file: File, max = 1000): Promise<{ src: string; width: number
   selector: 'app-toolbar',
   imports: [IconComponent],
   template: `
-    <div class="grid grid-cols-3 gap-1.5">
+    <div class="grid grid-cols-3 gap-2">
       @for (t of tools; track t.id) {
         <button
           type="button"
           class="tool"
           [class.tool-active]="store.tool() === t.id"
+          [attr.aria-pressed]="store.tool() === t.id"
           [title]="t.label + ' (' + t.key + ')'"
           (click)="pick(t.id)"
         >
           <svg [appIcon]="t.icon" class="size-5"></svg>
           <span>{{ t.label }}</span>
+          <span class="tool-key" aria-hidden="true">{{ t.key }}</span>
         </button>
       }
     </div>
 
     @if (store.tool() === 'symbol') {
-      <p class="mt-3 mb-1.5 text-xs font-medium text-gray-500">Símbolo</p>
-      <div class="grid grid-cols-7 gap-1">
+      <p class="mt-4 mb-2 text-xs font-medium text-slate-600">Símbolo</p>
+      <div class="symbol-grid">
         @for (s of symbols; track s.id) {
           <button
             type="button"
-            class="rounded-md p-1 hover:bg-gray-100 border"
-            [class]="
-              store.drawProps().symbol === s.id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-transparent'
-            "
+            class="symbol-btn"
+            [class.symbol-active]="store.drawProps().symbol === s.id"
             [title]="s.label"
             (click)="store.setDrawProps({ symbol: s.id })"
           >
-            <img [src]="preview(s.id)" [alt]="s.label" class="size-7" />
+            <img [src]="preview(s.id)" [alt]="s.label" class="size-6" />
           </button>
         }
       </div>
@@ -76,22 +74,28 @@ function readImage(file: File, max = 1000): Promise<{ src: string; width: number
 
     <input #file type="file" accept="image/*" class="hidden" (change)="onImage(file)" />
     @if (store.tool() === 'image' && store.pendingImage(); as img) {
-      <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
-        <img [src]="img.src" alt="" class="size-10 rounded object-cover border" />
-        <span class="flex-1">Clique no mapa para posicionar.</span>
-        <button type="button" class="text-blue-600 hover:underline" (click)="file.click()">
-          Trocar
-        </button>
+      <div class="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2">
+        <img
+          [src]="img.src"
+          alt=""
+          class="size-11 rounded-lg bg-white object-cover ring-1 ring-slate-200"
+        />
+        <span class="min-w-0 flex-1 text-xs font-medium text-slate-700">Imagem escolhida</span>
+        <button type="button" class="btn btn-sm" (click)="file.click()">Trocar</button>
       </div>
     }
 
     @if (store.tool() !== 'select') {
-      <p class="mt-3 text-xs text-gray-500 leading-snug">{{ hint() }} <kbd>Esc</kbd> cancela.</p>
+      <div class="callout mt-3 bg-blue-50/70 text-blue-950/70">
+        <svg [appIcon]="icons.Info" class="mt-px size-3.5 shrink-0 text-blue-500"></svg>
+        <p>{{ hint() }} <kbd>Esc</kbd> cancela.</p>
+      </div>
     }
   `,
 })
 export class Toolbar {
   protected readonly store = inject(CroquiStore);
+  protected readonly icons = Icons;
   protected readonly symbols = SYMBOLS;
   protected readonly tools: ToolButton[] = [
     { id: 'select', label: 'Selecionar', icon: Icons.MousePointer2, key: 'V' },

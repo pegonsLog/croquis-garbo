@@ -27,7 +27,7 @@ const measure = () =>
     const f = layer.getSource().getFeatures()[0];
     const res = st.map.getView().getResolution();
     const icon = layer.getStyle()(f, res)[0].getImage();
-    const label = document.querySelector('app-properties-panel')?.textContent.match(/Tamanho: (\d+) px/)?.[1];
+    const label = document.querySelector('app-properties-panel')?.textContent.match(/Tamanho\s*:?\s*(\d+) px/)?.[1];
     return {
       res: +res.toFixed(4),
       screenPx: Math.round(icon.getScale() * f.get('imageWidth')),

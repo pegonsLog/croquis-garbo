@@ -8,6 +8,11 @@
 @source './index.html';
 @import 'ol/ol.css';
 
+/* Fonte da área de trabalho (cabeçalho e laterais). O mapa continua com a fonte do sistema. */
+@theme {
+  --font-ui: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 html,
 body {
   height: 100%;
@@ -24,37 +29,264 @@ button {
 }
 
 @layer components {
-  .panel-title {
-    @apply text-xs font-semibold uppercase tracking-wide text-gray-500;
+  /* Cabeçalho e laterais: tudo o que fica fora do mapa */
+  .ui {
+    @apply font-ui text-slate-700 antialiased;
   }
+  .section-title {
+    @apply flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.08em] text-slate-400 uppercase;
+  }
+  .panel-title {
+    @apply text-[15px] leading-tight font-semibold tracking-tight text-slate-900;
+  }
+
+  /* Botões */
   .btn {
-    @apply inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-xs transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100 disabled:pointer-events-none disabled:opacity-50;
   }
   .btn-primary {
-    @apply border-blue-600 bg-blue-600 text-white hover:bg-blue-700;
+    @apply border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-600/25 hover:border-blue-700 hover:bg-blue-700 hover:text-white active:bg-blue-800;
+  }
+  .btn-danger {
+    @apply text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700;
+  }
+  .btn-sm {
+    @apply h-7 gap-1 rounded-md px-2 text-xs;
   }
   .icon-btn {
-    @apply inline-flex items-center justify-center rounded p-1 text-gray-600 hover:bg-gray-100;
+    @apply inline-flex size-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900;
   }
+  .btn:focus-visible,
+  .icon-btn:focus-visible,
+  .toolbar-btn:focus-visible,
+  .tool:focus-visible,
+  .segmented > button:focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-500;
+  }
+
+  /* Grupo de botões do cabeçalho (Novo, Abrir, Salvar) */
+  .toolbar-group {
+    @apply flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white p-0.5 shadow-xs;
+  }
+  .toolbar-btn {
+    @apply inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  /* Botões lado a lado num trilho (rotação, prolongar) */
+  .segmented {
+    @apply flex items-center gap-0.5 rounded-lg border border-slate-200 bg-slate-100/70 p-0.5;
+  }
+  .segmented > button {
+    @apply inline-flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium text-slate-600 transition hover:bg-white hover:text-slate-900 hover:shadow-xs;
+  }
+
+  /* Ferramentas */
   .tool {
-    @apply flex flex-col items-center gap-0.5 rounded-md border border-gray-200 px-1 py-1.5 text-[11px] text-gray-700 hover:bg-gray-50;
+    @apply relative flex h-[60px] flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white text-[11px] font-medium text-slate-600 shadow-xs transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900;
   }
-  .tool-active {
-    @apply border-blue-500 bg-blue-50 text-blue-700;
+  .tool-active,
+  .tool-active:hover {
+    @apply border-blue-500 bg-blue-50 text-blue-700 shadow-sm ring-2 ring-blue-500/15;
   }
+  .tool-key {
+    @apply absolute top-1 right-1.5 text-[9px] font-semibold text-slate-400;
+  }
+  .tool-active .tool-key {
+    @apply text-blue-400;
+  }
+  .symbol-grid {
+    @apply grid grid-cols-7 gap-1;
+  }
+  .symbol-btn {
+    @apply grid aspect-square place-items-center rounded-lg border border-transparent transition hover:border-slate-200 hover:bg-slate-50;
+  }
+  .symbol-active,
+  .symbol-active:hover {
+    @apply border-blue-500 bg-blue-50 ring-2 ring-blue-500/15;
+  }
+
+  /* Camadas */
+  .layer-item {
+    @apply relative flex h-10 cursor-pointer items-center gap-0.5 rounded-lg border border-transparent px-1 text-sm text-slate-700 transition hover:bg-slate-50;
+  }
+  .layer-active,
+  .layer-active:hover {
+    @apply border-blue-200 bg-blue-50/70 text-slate-900;
+  }
+  .layer-active::before {
+    content: '';
+    @apply absolute top-2 bottom-2 -left-px w-[3px] rounded-full bg-blue-600;
+  }
+  .layer-btn {
+    @apply grid size-7 shrink-0 place-items-center rounded-md text-slate-400 transition hover:bg-white hover:text-slate-700 hover:shadow-xs;
+  }
+  .layer-arrow {
+    @apply grid h-3.5 w-5 place-items-center rounded text-slate-400 transition hover:text-slate-800 disabled:pointer-events-none disabled:opacity-0;
+  }
+
+  /* Campos */
   .field {
-    @apply flex flex-col gap-1;
+    @apply flex flex-col gap-1.5;
   }
-  .field > span {
-    @apply text-xs font-medium text-gray-500;
+  .field-label {
+    @apply flex items-center justify-between gap-2 text-xs font-medium text-slate-600;
   }
-  .field input[type='text'],
-  .field textarea,
-  .field select {
-    @apply rounded-md border border-gray-300 px-2 py-1 text-sm;
+  .field-value {
+    @apply rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums;
   }
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-xs transition outline-none placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15;
+  }
+  select.input {
+    @apply appearance-none pr-8;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
+    background-position: right 0.6rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+  }
+  .input-soft {
+    @apply h-9 w-full rounded-lg border border-transparent bg-slate-100 text-sm text-slate-800 transition outline-none placeholder:text-slate-400 hover:bg-slate-200/70 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/15;
+  }
+  .no-spin {
+    -moz-appearance: textfield;
+  }
+  .no-spin::-webkit-inner-spin-button,
+  .no-spin::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  .toggle-row {
+    @apply flex cursor-pointer items-center gap-3 text-sm text-slate-700;
+  }
+
+  /* Interruptor (checkbox) */
+  .switch {
+    @apply h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full bg-slate-300;
+    background-image: radial-gradient(circle, #fff 0 7px, rgb(15 23 42 / 0.12) 7.5px, transparent 8.5px);
+    background-repeat: no-repeat;
+    background-size: 20px 20px;
+    background-position: 0 50%;
+    transition:
+      background-color 0.15s,
+      background-position 0.15s;
+  }
+  .switch:hover {
+    @apply bg-slate-400;
+  }
+  .switch:checked {
+    @apply bg-blue-600;
+    background-position: 100% 50%;
+  }
+  .switch:focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-500;
+  }
+
+  /* Controle deslizante: a parte preenchida vem de --fill (porcentagem) */
+  .range {
+    --fill: 50%;
+    @apply h-4 w-full cursor-pointer appearance-none bg-transparent outline-none;
+  }
+  .range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      to right,
+      var(--color-blue-600) var(--fill),
+      var(--color-slate-200) var(--fill)
+    );
+  }
+  .range::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -5px;
+    border: 2px solid var(--color-blue-600);
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.25);
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s;
+  }
+  .range:active::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+  .range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px rgb(37 99 235 / 0.2);
+  }
+  .range::-moz-range-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-slate-200);
+  }
+  .range::-moz-range-progress {
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-blue-600);
+  }
+  .range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--color-blue-600);
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 0.25);
+  }
+
+  /* Cores */
+  .swatch {
+    @apply relative grid size-7 place-items-center justify-self-center rounded-full shadow-[inset_0_0_0_1px_rgb(15_23_42/0.12)] transition hover:scale-110;
+  }
+  .swatch-active {
+    @apply ring-2 ring-blue-500 ring-offset-2;
+  }
+  .swatch-custom {
+    background: conic-gradient(
+      #ef4444,
+      #f59e0b,
+      #eab308,
+      #22c55e,
+      #06b6d4,
+      #3b82f6,
+      #8b5cf6,
+      #ec4899,
+      #ef4444
+    );
+  }
+
+  /* Caixas de texto auxiliar e ícone do tipo de objeto */
+  .callout {
+    @apply flex gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-500;
+  }
+  .kind-badge {
+    @apply grid size-10 shrink-0 place-items-center rounded-xl ring-1 ring-slate-900/5 ring-inset;
+  }
+
   kbd {
-    @apply rounded border border-gray-300 bg-gray-50 px-1 font-mono text-[10px] text-gray-600;
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-slate-200 bg-white px-1 font-ui text-[10px] font-semibold text-slate-500 shadow-[0_1px_0_0_var(--color-slate-200)];
+  }
+
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-200) transparent;
+  }
+
+  /* Menus que abrem (exportar, busca) */
+  .menu-pop {
+    animation: menu-pop 0.12s ease-out;
+  }
+}
+
+@keyframes menu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-pop {
+    animation: none;
   }
 }
 

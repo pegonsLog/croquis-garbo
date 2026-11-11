@@ -30,7 +30,7 @@ const measure = () =>
       .map((f) => Math.round(layer.getStyle()(f, res)[0].getImage().getScale() * 48));
     const label = document
       .querySelector('app-properties-panel')
-      ?.textContent.match(/Tamanho: (\d+) px/)?.[1];
+      ?.textContent.match(/Tamanho\s*:?\s*(\d+) px/)?.[1];
     return { res: +res.toFixed(4), sizes, panel: label ? +label : null };
   });
 const zoom = async (delta) => {

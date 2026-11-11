@@ -51,6 +51,7 @@
               }
             ],
             "styles": [
+              "node_modules/@fontsource-variable/inter/index.css",
               "src/styles.css"
             ],
             "allowedCommonJsDependencies": [
