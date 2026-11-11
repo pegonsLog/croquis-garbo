@@ -46,3 +46,6 @@ Thumbs.db
 # Ferramentas locais
 /.agents/tools/node_modules
 /.agents/screenshots
+
+# Firebase (cache local do deploy)
+/.firebase
