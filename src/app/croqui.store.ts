@@ -62,7 +62,6 @@ export interface SavedCroqui {
   name: string;
   view: { center: number[]; zoom: number };
   base: Record<BaseLayerId, boolean>;
-  grayVias: boolean;
   activeLayerId: string | null;
   layers: SavedLayer[];
 }
@@ -134,7 +133,6 @@ export class CroquiStore {
     mapaBase: false,
     ortofoto: false,
   });
-  readonly grayVias = signal(true);
   readonly message = signal<string | null>(null);
   readonly savedAt = signal<Date | null>(null);
   /** Configuração usada no próximo objeto desenhado. */
@@ -268,7 +266,6 @@ export class CroquiStore {
     });
 
     if (!this.restore()) this.newCroqui();
-    this.applyGray();
   }
 
   destroy(): void {
@@ -379,16 +376,6 @@ export class CroquiStore {
     this.base.update((b) => ({ ...b, [id]: visible }));
     this.baseLayers[id].setVisible(visible);
     this.scheduleSave();
-  }
-
-  setGrayVias(value: boolean): void {
-    this.grayVias.set(value);
-    this.applyGray();
-    this.scheduleSave();
-  }
-
-  private applyGray(): void {
-    this.map?.getTargetElement()?.classList.toggle('vias-cinza', this.grayVias());
   }
 
   // ---------- ferramentas ----------
@@ -787,7 +774,6 @@ export class CroquiStore {
       name: this.name(),
       view: { center: view?.getCenter() ?? BH_CENTER, zoom: view?.getZoom() ?? 3 },
       base: this.base(),
-      grayVias: this.grayVias(),
       activeLayerId: this.activeLayerId(),
       layers: this.layers().map((l) => ({
         id: l.id,
@@ -821,8 +807,6 @@ export class CroquiStore {
       this.name.set(data.name || 'Croqui');
       for (const info of BASE_LAYERS)
         this.setBase(info.id, data.base?.[info.id] ?? this.base()[info.id]);
-      this.grayVias.set(data.grayVias ?? true);
-      this.applyGray();
       this.syncLayers();
       if (data.view && this.map) {
         this.map.getView().setCenter(data.view.center);

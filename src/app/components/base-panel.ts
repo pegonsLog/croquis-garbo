@@ -20,14 +20,6 @@ import { CroquiStore } from '../croqui.store';
           </span>
         </label>
       }
-      <label class="flex items-center gap-2 text-sm cursor-pointer pt-1 border-t border-gray-100">
-        <input
-          type="checkbox"
-          [checked]="store.grayVias()"
-          (change)="store.setGrayVias($any($event.target).checked)"
-        />
-        Vias em cinza
-      </label>
     </div>
     <p class="mt-2 text-xs text-gray-500">Os nomes das ruas aparecem ao aproximar o mapa.</p>
   `,
