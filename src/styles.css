@@ -58,6 +58,14 @@ button {
   }
 }
 
+/* Vias (meio-fio) sempre em cinza escuro no lugar do azul do BHMap */
+.base-meio-fio {
+  filter: grayscale(1) opacity(0.75);
+}
+.base-alinhamento {
+  filter: opacity(0.55);
+}
+
 .drawing .ol-viewport {
   cursor: crosshair;
 }
