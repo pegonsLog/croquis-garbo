@@ -24,6 +24,8 @@ const SHORTCUTS = [
   { label: 'Duplicar', keys: ['Ctrl', 'D'] },
   { label: 'Salvar em arquivo', keys: ['Ctrl', 'S'] },
   { label: 'Concluir desenho', keys: ['Enter'] },
+  { label: 'Mover o mapa (vertical)', keys: ['Ctrl', 'Roda'] },
+  { label: 'Mover o mapa (lados)', keys: ['Ctrl', 'Shift', 'Roda'] },
   { label: 'Cancelar / soltar', keys: ['Esc'] },
 ];
 

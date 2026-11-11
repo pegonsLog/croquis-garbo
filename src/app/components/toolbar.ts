@@ -139,9 +139,9 @@ export class Toolbar {
     switch (this.store.tool()) {
       case 'line':
       case 'arrow':
-        return 'Clique para cada ponto e dê dois cliques para terminar.';
+        return 'Clique para cada ponto e dê dois cliques para terminar. Ctrl + roda move o mapa (com Shift, para os lados).';
       case 'polygon':
-        return 'Clique nos vértices e clique no primeiro ponto (ou dois cliques) para fechar.';
+        return 'Clique nos vértices e clique no primeiro ponto (ou dois cliques) para fechar. Ctrl + roda move o mapa (com Shift, para os lados).';
       case 'rectangle':
       case 'circle':
         return 'Clique no início e clique de novo para terminar.';

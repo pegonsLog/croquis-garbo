@@ -5,7 +5,16 @@ import Feature from 'ol/Feature';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
-import { DoubleClickZoom, Draw, Modify, Select, Snap, Translate } from 'ol/interaction';
+import {
+  DoubleClickZoom,
+  Draw,
+  Modify,
+  MouseWheelZoom,
+  Select,
+  Snap,
+  Translate,
+  defaults as defaultInteractions,
+} from 'ol/interaction';
 import { createBox, type GeometryFunction } from 'ol/interaction/Draw';
 import { Circle, Geometry, LineString, Point, Polygon } from 'ol/geom';
 import { fromCircle } from 'ol/geom/Polygon';
@@ -35,6 +44,7 @@ import {
 } from './map/styles';
 import { captureMap } from './export/capture';
 import { RotateHandle, isRotatableShape, normalizeDeg, rotationCenter } from './map/rotate';
+import { wheelPan } from './map/wheel-pan';
 
 export type Tool = 'select' | FeatureKind;
 
@@ -218,6 +228,11 @@ export class CroquiStore {
       ],
       controls: defaultControls({ attribution: false }).extend([
         new ScaleLine({ units: 'metric', bar: true, steps: 4, text: true, minWidth: 120 }),
+      ]),
+      // Rodinha dá zoom; com a tecla Ctrl apertada ela move o mapa (wheel-pan.ts)
+      interactions: defaultInteractions({ mouseWheelZoom: false }).extend([
+        new MouseWheelZoom({ condition: (e) => !e.ctrlKey }),
+        wheelPan(),
       ]),
       view: new View({
         projection: BH_PROJECTION,
