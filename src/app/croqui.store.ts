@@ -5,6 +5,7 @@ import Feature from 'ol/Feature';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
+import ImageWMS from 'ol/source/ImageWMS';
 import {
   DoubleClickZoom,
   Draw,
@@ -144,6 +145,8 @@ export class CroquiStore {
     ortofoto: false,
   });
   readonly message = signal<string | null>(null);
+  /** O BHMap não respondeu: o fundo do mapa pode estar faltando. */
+  readonly baseDown = signal(false);
   readonly savedAt = signal<Date | null>(null);
   /** Configuração usada no próximo objeto desenhado. */
   readonly drawProps = signal<Omit<CroquiProps, 'kind'>>({ ...DEFAULT_PROPS });
@@ -280,11 +283,60 @@ export class CroquiStore {
       this.scheduleSave();
     });
 
+    this.watchBaseLayers();
     if (!this.restore()) this.newCroqui();
   }
 
   destroy(): void {
+    clearTimeout(this.baseDownTimer);
     this.map?.setTarget(undefined);
+  }
+
+  // ---------- BHMap fora do ar ----------
+
+  /** Último carregamento de cada camada de fundo: true = deu certo, false = falhou. */
+  private baseStatus = new Map<BaseLayerId, boolean>();
+  private baseDownTimer?: ReturnType<typeof setTimeout>;
+
+  /** Acompanha os carregamentos das camadas do BHMap para avisar quando o servidor não responde. */
+  private watchBaseLayers(): void {
+    for (const id of Object.keys(this.baseLayers) as BaseLayerId[]) {
+      const source = this.baseLayers[id].getSource();
+      const ok = () => this.setBaseStatus(id, true);
+      const fail = () => this.setBaseStatus(id, false);
+      if (source instanceof ImageWMS) {
+        source.on('imageloadend', ok);
+        source.on('imageloaderror', fail);
+      } else if (source instanceof VectorSource) {
+        source.on('featuresloadend', ok);
+        source.on('featuresloaderror', fail);
+      }
+    }
+  }
+
+  private setBaseStatus(id: BaseLayerId, ok: boolean): void {
+    this.baseStatus.set(id, ok);
+    this.updateBaseDown();
+  }
+
+  /**
+   * Mostra o aviso se alguma camada de fundo ligada falhou no último carregamento.
+   * Espera um pouco antes de mostrar: uma imagem cancelada porque o mapa andou é
+   * logo seguida de outra que carrega.
+   */
+  private updateBaseDown(): void {
+    const down = [...this.baseStatus].some(([id, ok]) => !ok && this.base()[id]);
+    if (!down) {
+      clearTimeout(this.baseDownTimer);
+      this.baseDownTimer = undefined;
+      this.baseDown.set(false);
+    } else if (!this.baseDown() && !this.baseDownTimer) {
+      this.baseDownTimer = setTimeout(() => {
+        this.baseDownTimer = undefined;
+        if ([...this.baseStatus].some(([id, ok]) => !ok && this.base()[id]))
+          this.baseDown.set(true);
+      }, 2000);
+    }
   }
 
   // ---------- camadas do usuário ----------
@@ -390,6 +442,7 @@ export class CroquiStore {
   setBase(id: BaseLayerId, visible: boolean): void {
     this.base.update((b) => ({ ...b, [id]: visible }));
     this.baseLayers[id].setVisible(visible);
+    this.updateBaseDown();
     this.scheduleSave();
   }
 

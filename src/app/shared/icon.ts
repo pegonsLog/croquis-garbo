@@ -41,6 +41,7 @@ import {
   Spline,
   Square,
   Trash2,
+  TriangleAlert,
   Type,
   X,
   type IconNode,
@@ -88,6 +89,7 @@ export const Icons = {
   Spline,
   Square,
   Trash2,
+  TriangleAlert,
   Type,
   X,
 } satisfies Record<string, IconNode>;

@@ -218,6 +218,22 @@
         </div>
       }
 
+      @if (store.baseDown()) {
+        <div
+          role="alert"
+          class="ui menu-pop absolute bottom-3 left-3 z-10 flex max-w-sm items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/95 px-3 py-2.5 text-xs text-amber-900 shadow-lg shadow-amber-900/10 backdrop-blur-sm"
+        >
+          <svg [appIcon]="icons.TriangleAlert" class="mt-px size-4 shrink-0 text-amber-500"></svg>
+          <div>
+            <p class="font-semibold">O BHMap não está respondendo</p>
+            <p class="mt-0.5 leading-relaxed text-amber-900/75">
+              O fundo do mapa vem do servidor da Prefeitura e pode não aparecer agora. Seus desenhos
+              não são afetados. Tente recarregar a página mais tarde.
+            </p>
+          </div>
+        </div>
+      }
+
       @if (store.activeLayer(); as layer) {
         <div
           class="ui absolute right-3 bottom-3 z-10 flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 py-1 pr-3 pl-2.5 text-xs text-slate-500 shadow-sm backdrop-blur-sm"
