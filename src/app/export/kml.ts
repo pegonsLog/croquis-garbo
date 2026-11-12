@@ -5,6 +5,7 @@ import { strToU8, zipSync } from 'fflate';
 import { BH_PROJECTION } from '../map/bhmap';
 import { DEFAULT_PROPS, KIND_LABELS, lockedPx, type CroquiProps } from '../map/styles';
 import { BOTTOM_ANCHORED, SYMBOL_BY_ID, symbolDataUrl } from '../map/symbols';
+import { CROQUI_DATA, CROQUI_KMZ_FILE, coordsFingerprint, type EmbeddedCroqui } from './kml-shared';
 
 export interface KmlLayer {
   name: string;
@@ -18,6 +19,8 @@ export interface KmlOptions {
   resolution: number;
   /** KMZ inclui os símbolos e imagens; KML puro usa o alfinete padrão do Google. */
   kmz: boolean;
+  /** Croqui completo, guardado no arquivo para voltar igual ao abrir no app. */
+  croqui?: unknown;
 }
 
 const esc = (s: string) =>
@@ -192,11 +195,26 @@ export async function buildKml(layers: KmlLayer[], options: KmlOptions): Promise
     lookAt = `<LookAt><longitude>${center[0].toFixed(7)}</longitude><latitude>${center[1].toFixed(7)}</latitude><altitude>0</altitude><range>${Math.round(span * 2)}</range><tilt>0</tilt><heading>0</heading></LookAt>`;
   }
 
+  // Croqui completo junto, para voltar igual ao abrir no app (ver kml-shared.ts)
+  const body = folders.join('');
+  let extended = '';
+  if (options.croqui) {
+    const embedded: EmbeddedCroqui = {
+      hash: coordsFingerprint(
+        [...body.matchAll(/<coordinates>([^<]*)<\/coordinates>/g)].map((m) => m[1]),
+      ),
+      croqui: options.croqui,
+    };
+    if (options.kmz) files[CROQUI_KMZ_FILE] = strToU8(JSON.stringify(embedded));
+    else
+      extended = `<ExtendedData><Data name="${CROQUI_DATA}"><value>${esc(JSON.stringify(embedded))}</value></Data></ExtendedData>`;
+  }
+
   const kml =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${esc(options.name)}</name>` +
     `<description>Croqui gerado no Croquis BH. Base: BHMap / Prefeitura de Belo Horizonte.</description>` +
-    `${lookAt}${folders.join('')}</Document></kml>`;
+    `${lookAt}${extended}${body}</Document></kml>`;
 
   if (!options.kmz) return new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
   const zipped = zipSync({ 'doc.kml': strToU8(kml), ...files }, { level: 6 });

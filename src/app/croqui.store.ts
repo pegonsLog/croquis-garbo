@@ -6,6 +6,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
 import ImageWMS from 'ol/source/ImageWMS';
+import { createEmpty, extend, isEmpty } from 'ol/extent';
 import {
   DoubleClickZoom,
   Draw,
@@ -71,10 +72,22 @@ export interface SavedCroqui {
   app: 'croquis-bh';
   version: 1;
   name: string;
-  view: { center: number[]; zoom: number };
-  base: Record<BaseLayerId, boolean>;
+  /** Ausente em croquis importados de KML/KMZ: o mapa enquadra os objetos. */
+  view?: { center: number[]; zoom: number };
+  /** Ausente em croquis importados de KML/KMZ: mantém o fundo atual. */
+  base?: Record<BaseLayerId, boolean>;
   activeLayerId: string | null;
   layers: SavedLayer[];
+}
+
+/** KML ou KMZ pela extensão, ou pelo conteúdo (zip ou XML) quando a extensão não ajuda. */
+async function isKmlFile(file: File): Promise<boolean> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.kml') || name.endsWith('.kmz')) return true;
+  if (name.endsWith('.json')) return false;
+  const head = new Uint8Array(await file.slice(0, 64).arrayBuffer());
+  if (head[0] === 0x50 && head[1] === 0x4b) return true;
+  return new TextDecoder().decode(head).trimStart().startsWith('<');
 }
 
 const STORAGE_KEY = 'croquis-bh:atual';
@@ -925,13 +938,51 @@ export class CroquiStore {
     this.download(blob, `${this.fileName()}.croqui.json`);
   }
 
+  /** Abre um .croqui.json, .kml ou .kmz como croqui novo (o atual é substituído). */
   async openFile(file: File): Promise<void> {
     try {
+      if (await isKmlFile(file)) {
+        const { readKmlFile } = await import('./export/kml-import');
+        const result = await readKmlFile(file);
+        this.load(result.croqui);
+        if (!result.croqui.view) this.fitToFeatures();
+        if (result.exact) {
+          this.flash(`"${this.name()}" aberto.`);
+        } else {
+          const layers = result.croqui.layers.length;
+          const ignored = result.skipped
+            ? ` ${result.skipped} item(ns) sem ponto, linha ou polígono foram ignorados.`
+            : '';
+          this.flash(
+            `"${this.name()}" importado: ${result.count} objeto(s) em ${layers} camada(s).${ignored}`,
+          );
+        }
+        return;
+      }
       this.load(JSON.parse(await file.text()));
       this.flash(`"${this.name()}" aberto.`);
     } catch (e) {
-      this.flash(e instanceof Error ? e.message : 'Não foi possível abrir o arquivo.');
+      this.flash(
+        e instanceof SyntaxError
+          ? 'O arquivo não é um croqui (.croqui.json), KML ou KMZ.'
+          : e instanceof Error
+            ? e.message
+            : 'Não foi possível abrir o arquivo.',
+      );
     }
+  }
+
+  /** Enquadra o mapa em todos os objetos do croqui. */
+  private fitToFeatures(): void {
+    if (!this.map) return;
+    const extent = createEmpty();
+    for (const l of this.layers())
+      for (const f of l.olLayer.getSource()!.getFeatures()) {
+        const g = f.getGeometry();
+        if (g) extend(extent, g.getExtent());
+      }
+    if (isEmpty(extent)) return;
+    this.map.getView().fit(extent, { padding: [60, 60, 60, 60], maxZoom: 9 });
   }
 
   /** Exportação em andamento (para desabilitar o botão e mostrar aviso). */
@@ -995,6 +1046,7 @@ export class CroquiStore {
         name: this.name(),
         resolution: this.map!.getView().getResolution() ?? 1,
         kmz,
+        croqui: this.serialize(),
       });
       this.download(blob, `${this.fileName()}.${kmz ? 'kmz' : 'kml'}`);
     });
