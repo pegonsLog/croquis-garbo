@@ -125,8 +125,8 @@ const SHORTCUTS = [
           <svg [appIcon]="icons.Info" class="mt-0.5 size-3.5 shrink-0 text-slate-400"></svg>
           <p>
             Arraste o objeto para mover. Arraste os vértices para mudar a forma (arrastar uma ponta
-            também estica a linha). Clique numa linha para criar um vértice novo e use Alt + clique
-            para remover um.
+            também estica a linha). Clique numa linha para criar um vértice novo e use o botão
+            direito (ou Alt + clique) sobre um vértice para removê-lo.
           </p>
         </div>
       </div>

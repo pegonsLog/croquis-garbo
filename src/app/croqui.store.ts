@@ -290,6 +290,11 @@ export class CroquiStore {
       this.touch();
     });
     this.translate.on('translateend', () => this.touch());
+    // Botão direito sobre um nó do objeto selecionado remove o nó (como Alt + clique)
+    this.map.getViewport()?.addEventListener('contextmenu', (e) => {
+      if (!this.modify.getActive()) return;
+      if (this.removeVertexAt(this.map!.getEventPixel(e))) e.preventDefault();
+    });
     this.map.getView().on('change:resolution', () => this.scheduleSave());
     this.map.on('moveend', () => {
       this.resolution.set(this.map?.getView().getResolution() ?? 1);
@@ -298,6 +303,48 @@ export class CroquiStore {
 
     this.watchBaseLayers();
     if (!this.restore()) this.newCroqui();
+  }
+
+  /**
+   * Remove o vértice do objeto selecionado que está sob o pixel (até 8 px de distância).
+   * Linha e seta ficam com pelo menos 2 pontos; polígono, com pelo menos 3.
+   */
+  private removeVertexAt(pixel: number[]): boolean {
+    const feature = this.selected();
+    const geometry = feature?.getGeometry();
+    if (!this.map || !feature || !this.layerOf(feature) || this.extending()) return false;
+    const near = (c: number[]) => {
+      const p = this.map!.getPixelFromCoordinate(c);
+      return Math.hypot(p[0] - pixel[0], p[1] - pixel[1]);
+    };
+    const closest = (coords: number[][]) => {
+      let best = -1;
+      let dist = 8;
+      coords.forEach((c, i) => {
+        const d = near(c);
+        if (d <= dist) [best, dist] = [i, d];
+      });
+      return best;
+    };
+    if (geometry instanceof LineString) {
+      const coords = geometry.getCoordinates();
+      const i = closest(coords);
+      if (i < 0 || coords.length <= 2) return i >= 0;
+      coords.splice(i, 1);
+      geometry.setCoordinates(coords);
+    } else if (geometry instanceof Polygon) {
+      const rings = geometry.getCoordinates();
+      const ring = rings[0].slice(0, -1); // sem o ponto repetido de fechamento
+      const i = closest(ring);
+      if (i < 0 || ring.length <= 3) return i >= 0;
+      ring.splice(i, 1);
+      rings[0] = [...ring, ring[0]];
+      geometry.setCoordinates(rings);
+    } else {
+      return false;
+    }
+    this.touch();
+    return true;
   }
 
   destroy(): void {
